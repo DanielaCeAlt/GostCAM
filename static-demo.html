@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GostCAM - Demo Estático</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .slide-in { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+    </style>
+</head>
+<body class="h-full bg-gray-50">
+    <div class="min-h-full flex items-center justify-center py-12 px-4">
+        <div class="max-w-4xl w-full space-y-8">
+            <div class="text-center">
+                <div class="mx-auto h-20 w-20 bg-blue-600 rounded-full flex items-center justify-center">
+                    <i class="fas fa-video text-white text-3xl"></i>
+                </div>
+                <h1 class="mt-6 text-4xl font-extrabold text-gray-900">GostCAM Demo Estático</h1>
+                <p class="mt-4 text-lg text-gray-600">Esta es una demo estática del código HTML</p>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-lg p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">Comparación de Versiones</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="border-2 border-red-200 rounded-lg p-6">
+                        <h3 class="text-xl font-semibold text-red-700 mb-4">
+                            <i class="fas fa-file-code mr-2"></i>HTML Estático
+                        </h3>
+                        <ul class="space-y-2 text-sm text-gray-600">
+                            <li><i class="fas fa-times text-red-500 mr-2"></i>Datos simulados (mock)</li>
+                            <li><i class="fas fa-times text-red-500 mr-2"></i>Sin base de datos real</li>
+                            <li><i class="fas fa-times text-red-500 mr-2"></i>Autenticación falsa</li>
+                            <li><i class="fas fa-times text-red-500 mr-2"></i>No escalable</li>
+                            <li><i class="fas fa-times text-red-500 mr-2"></i>JavaScript plano</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="border-2 border-green-200 rounded-lg p-6">
+                        <h3 class="text-xl font-semibold text-green-700 mb-4">
+                            <i class="fas fa-rocket mr-2"></i>Tu Next.js App
+                        </h3>
+                        <ul class="space-y-2 text-sm text-gray-600">
+                            <li><i class="fas fa-check text-green-500 mr-2"></i>Base de datos MySQL real</li>
+                            <li><i class="fas fa-check text-green-500 mr-2"></i>Autenticación JWT + bcrypt</li>
+                            <li><i class="fas fa-check text-green-500 mr-2"></i>APIs funcionando</li>
+                            <li><i class="fas fa-check text-green-500 mr-2"></i>Escalable y profesional</li>
+                            <li><i class="fas fa-check text-green-500 mr-2"></i>TypeScript + React</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="mt-8 text-center">
+                    <a href="http://localhost:3000" target="_blank" 
+                       class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                        <i class="fas fa-external-link-alt mr-2"></i>
+                        Abrir Aplicación Next.js Real
+                    </a>
+                </div>
+            </div>
+            
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-yellow-400 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-yellow-800">Nota Importante</h3>
+                        <p class="mt-2 text-sm text-yellow-700">
+                            Esta versión HTML estática solo muestra la interfaz visual. 
+                            Tu aplicación Next.js en <strong>localhost:3000</strong> tiene toda la funcionalidad real:
+                            base de datos, autenticación, APIs, y más.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
