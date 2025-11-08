@@ -29,7 +29,7 @@ export default function RootLayout({
       <head>
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
       </head>
-      <body className="h-full bg-gray-50 dark:bg-gray-900 transition-colors">
+      <body className="h-full bg-gray-100 dark:bg-gray-800 transition-colors">
         <ErrorBoundary>
           <ThemeProvider>
             {children}

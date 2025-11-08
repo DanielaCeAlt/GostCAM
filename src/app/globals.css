@@ -2,22 +2,22 @@
 
 body {
   box-sizing: border-box;
-  /* Fondo gris claro para toda la página */
-  background-color: #f5f5f5; /* Gris claro suave */
+  /* Fondo gris para toda la página */
+  background-color: #f3f4f6; /* bg-gray-100 */
 }
 
 html {
-  background-color: #f5f5f5; /* Gris claro suave */
+  background-color: #f3f4f6; /* bg-gray-100 */
 }
 
 /* Dark mode */
 @media (prefers-color-scheme: dark) {
   body {
-    background-color: #111827; /* Equivale a bg-gray-900 */
+    background-color: #1f2937; /* bg-gray-800 */
   }
   
   html {
-    background-color: #111827; /* Equivale a bg-gray-900 */
+    background-color: #1f2937; /* bg-gray-800 */
   }
 }
 
