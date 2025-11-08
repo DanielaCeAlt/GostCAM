@@ -9,6 +9,11 @@ import EquiposEditar from './EquiposEditar';
 import EquiposCambioUbicacion from './EquiposCambioUbicacion';
 import EquiposMantenimiento from './EquiposMantenimiento';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
+import EquiposNavigationTabs from './EquiposNavigationTabs';
+import EquiposSearchResults from './EquiposSearchResults';
+import EquiposHistorialView from './EquiposHistorialView';
+import EquiposManagerHeader from './EquiposManagerHeader';
+import EquiposInfoPanel from './EquiposInfoPanel';
 import { apiService } from '@/lib/apiService';
 
 // Tipos de vista disponibles
@@ -171,35 +176,12 @@ export default function EquiposManager({ vistaInicial = 'lista' }: EquiposManage
     setVistaActual('mantenimientoEquipo');
   };
 
-  // Renderizar barra de navegación/pestañas
-  const renderNavegacion = () => {
-    const tabs = [
-      { id: 'lista', label: 'Lista de Equipos', icon: 'fa-list' },
-      { id: 'alta', label: 'Nuevo Equipo', icon: 'fa-plus' },
-      { id: 'busqueda', label: 'Búsqueda Avanzada', icon: 'fa-search' }
-    ];
-
-    return (
-      <div className="bg-white border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-8">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => cambiarVista(tab.id as VistaActual)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                vistaActual === tab.id
-                  ? 'border-orange-600 text-orange-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <i className={`fas ${tab.icon} mr-2`}></i>
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-      </div>
-    );
-  };
+  // Configuración de tabs para navegación
+  const navigationTabs = [
+    { id: 'lista', label: 'Lista de Equipos', icon: 'fa-list' },
+    { id: 'alta', label: 'Nuevo Equipo', icon: 'fa-plus' },
+    { id: 'busqueda', label: 'Búsqueda Avanzada', icon: 'fa-search' }
+  ];
 
   // Renderizar contenido basado en la vista actual
   const renderContenido = () => {
@@ -224,57 +206,11 @@ export default function EquiposManager({ vistaInicial = 'lista' }: EquiposManage
               onResultados={handleResultadosBusqueda}
             />
             
-            {resultadosBusqueda.length > 0 && (
-              <div className="mt-6">
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    Resultados de Búsqueda
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    {resultadosBusqueda.map((equipo, index) => (
-                      <div key={equipo.no_serie || index} className="border border-gray-200 rounded-lg p-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <strong>No. Serie:</strong> {equipo.no_serie}
-                          </div>
-                          <div>
-                            <strong>Nombre:</strong> {equipo.nombreEquipo}
-                          </div>
-                          <div>
-                            <strong>Tipo:</strong> {equipo.TipoEquipo}
-                          </div>
-                          <div>
-                            <strong>Estatus:</strong> {equipo.EstatusEquipo}
-                          </div>
-                          <div>
-                            <strong>Sucursal:</strong> {equipo.SucursalActual}
-                          </div>
-                          <div>
-                            <strong>Usuario:</strong> {equipo.UsuarioAsignado}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {resultadosBusqueda.length === 0 && (
-              <div className="mt-6">
-                <div className="bg-white rounded-lg shadow p-6">
-                  <div className="text-center py-8">
-                    <p className="text-gray-600">
-                      No se encontraron equipos con los filtros seleccionados
-                    </p>
-                    <p className="text-sm text-gray-500 mt-2">
-                      Prueba modificando los filtros de búsqueda
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
+            <EquiposSearchResults
+              resultados={resultadosBusqueda}
+              onEquipoSelect={handleEquipoSelect}
+              onVerDetalles={handleVerDetalles}
+            />
           </div>
         );
 
@@ -288,22 +224,24 @@ export default function EquiposManager({ vistaInicial = 'lista' }: EquiposManage
 
       case 'historial':
         return (
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-medium text-gray-900">
-                Historial del Equipo: {equipoSeleccionado}
-              </h3>
+          <div>
+            <div className="mb-6">
               <button
                 onClick={() => setVistaActual('lista')}
-                className="px-3 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                className="flex items-center px-4 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors duration-200"
               >
-                <i className="fas fa-arrow-left mr-2"></i>Volver a Lista
+                <i className="fas fa-arrow-left mr-2"></i>
+                Volver a Lista
               </button>
             </div>
-            <div className="text-center py-8">
-              <i className="fas fa-history text-4xl text-gray-400 mb-4"></i>
-              <p className="text-gray-600">Cargando historial completo del equipo...</p>
-            </div>
+            <EquiposHistorialView
+              historial={[]} // TODO: Cargar historial real del equipo
+              loading={false}
+              onRefresh={() => {
+                // TODO: Implementar recarga de historial
+                console.log('Refrescando historial para:', equipoSeleccionado);
+              }}
+            />
           </div>
         );
 
@@ -453,14 +391,24 @@ export default function EquiposManager({ vistaInicial = 'lista' }: EquiposManage
 
   return (
     <div className="max-w-7xl mx-auto">
-      {/* Encabezado principal */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Gestión de Equipos</h1>
-        <p className="text-gray-600">Sistema integral de administración de inventarios</p>
-      </div>
+      {/* Header del Manager */}
+      <EquiposManagerHeader
+        title="Gestión de Equipos"
+        subtitle="Sistema integral de administración de inventarios"
+        onCreateNew={() => cambiarVista('alta')}
+        onRefresh={() => setRefreshList(prev => prev + 1)}
+        showCreateButton={vistaActual !== 'alta'}
+        showRefreshButton={vistaActual === 'lista'}
+        equiposCount={undefined} // TODO: Obtener contador real
+        loading={cargandoEquipo}
+      />
 
       {/* Navegación por pestañas */}
-      {renderNavegacion()}
+      <EquiposNavigationTabs
+        tabs={navigationTabs}
+        activeTab={vistaActual}
+        onTabChange={(tabId) => cambiarVista(tabId as VistaActual)}
+      />
 
       {/* Contenido de la vista actual */}
       <div className="min-h-[500px]">
