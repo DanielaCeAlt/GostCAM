@@ -394,12 +394,10 @@ export default function EquiposManager({ vistaInicial = 'lista' }: EquiposManage
       {/* Header del Manager */}
       <EquiposManagerHeader
         title="Gestión de Equipos"
-        subtitle="Sistema integral de administración de inventarios"
         onCreateNew={() => cambiarVista('alta')}
         onRefresh={() => setRefreshList(prev => prev + 1)}
         showCreateButton={vistaActual !== 'alta'}
         showRefreshButton={vistaActual === 'lista'}
-        equiposCount={undefined} // TODO: Obtener contador real
         loading={cargandoEquipo}
       />
 
