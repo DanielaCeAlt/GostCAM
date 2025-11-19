@@ -1,24 +1,45 @@
 @import "tailwindcss";
 
+/* ===== CSS Variables (Design Tokens) ===== */
+:root {
+  /* Colores de texto */
+  --text-primary: #1f2937; /* gray-800 - Alto contraste */
+  --text-secondary: #4b5563; /* gray-700 - Contraste medio */
+  --text-muted: #6b7280; /* gray-500 - Soporte */
+  
+  /* Fondos */
+  --bg-base: #f3f4f6; /* gray-100 */
+  --bg-card: #ffffff; /* white */
+  --bg-hover: #f9fafb; /* gray-50 */
+  
+  /* Bordes */
+  --border-color: #e5e7eb; /* gray-200 */
+  --border-radius: 6px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-primary: #f3f4f6; /* gray-100 - Alto contraste */
+    --text-secondary: #d1d5db; /* gray-300 */
+    --text-muted: #9ca3af; /* gray-400 */
+    
+    --bg-base: #1f2937; /* gray-800 */
+    --bg-card: #111827; /* gray-900 */
+    --bg-hover: #1a202c; /* gray-800-dark */
+    
+    --border-color: #374151; /* gray-700 */
+  }
+}
+
 body {
   box-sizing: border-box;
-  /* Fondo gris para toda la página */
-  background-color: #f3f4f6; /* bg-gray-100 */
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 html {
-  background-color: #f3f4f6; /* bg-gray-100 */
-}
-
-/* Dark mode */
-@media (prefers-color-scheme: dark) {
-  body {
-    background-color: #1f2937; /* bg-gray-800 */
-  }
-  
-  html {
-    background-color: #1f2937; /* bg-gray-800 */
-  }
+  background-color: var(--bg-base);
 }
 
 .fade-in {
@@ -46,5 +67,56 @@ html {
   }
   to { 
     transform: translateX(0); 
+  }
+}
+
+/* ===== Utilidades de Accesibilidad ===== */
+.focus-visible-ring {
+  outline: none;
+  box-shadow: 0 0 0 2px white, 0 0 0 4px #3b82f6;
+}
+
+@media (prefers-color-scheme: dark) {
+  .focus-visible-ring {
+    box-shadow: 0 0 0 2px #111827, 0 0 0 4px #3b82f6;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ===== Touch Target Mínimos (44px) ===== */
+button, a[role="button"], [role="button"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* ===== Skeleton Loader ===== */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-hover) 0%,
+    var(--bg-card) 50%,
+    var(--bg-hover) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
   }
 }
