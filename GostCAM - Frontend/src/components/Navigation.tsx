@@ -1,24 +1,33 @@
 // =============================================
-// COMPONENTE DE NAVEGACIÓN - GOSTCAM
+// COMPONENTE DE NAVEGACIÓN OPTIMIZADO - GOSTCAM
 // =============================================
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { useLogger } from '@/lib/logger';
 import { useKeyboardNavigation, useAriaAnnouncements } from '@/hooks/useAccessibility';
+import GostCamButton, { GostCamIconButton } from '@/components/ui/GostCamButton';
+import { MESSAGES } from '@/lib/messages';
 
 export default function Navigation() {
   const { state, logout, setSection, getUserRoleColor } = useApp();
+  const logger = useLogger();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
   
   // Hooks de accesibilidad
   const { focusElement } = useKeyboardNavigation();
   const { announcePageChange, announceSuccess } = useAriaAnnouncements();
 
-  // Keyboard shortcuts mejorados
+  // Optimized keyboard shortcuts con cleanup
   useEffect(() => {
+    // Crear nuevo AbortController para este efecto
+    abortControllerRef.current = new AbortController();
+    const { signal } = abortControllerRef.current;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // Global shortcuts
       if (e.key === '/' && !e.ctrlKey && !e.metaKey && e.target instanceof HTMLElement && e.target.tagName !== 'INPUT') {
@@ -27,12 +36,12 @@ export default function Navigation() {
         announcePageChange('Modo búsqueda activado');
         const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
         if (searchInput) searchInput.focus();
+        logger.userAction('keyboard_shortcut', undefined, { action: 'search' });
       }
       
       if (e.key === 'Escape') {
         setIsMobileMenuOpen(false);
         setSearchFocused(false);
-        // Devolver foco al botón de menú si estaba abierto
         if (isMobileMenuOpen) {
           focusElement('[aria-label="Abrir menú"]');
         }
@@ -51,7 +60,11 @@ export default function Navigation() {
         if (sectionId) {
           e.preventDefault();
           setSection(sectionId);
-          announcePageChange(navItems.find(item => item.id === sectionId)?.label || sectionId);
+          const navItem = navItems.find(item => item.id === sectionId);
+          if (navItem) {
+            announcePageChange(navItem.label);
+            logger.userAction('keyboard_navigation', undefined, { section: sectionId });
+          }
         }
       }
 
@@ -62,20 +75,23 @@ export default function Navigation() {
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isMobileMenuOpen, focusElement, announcePageChange]);
+    window.addEventListener('keydown', handleKeyDown, { signal });
+    
+    // Cleanup function
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [isMobileMenuOpen, focusElement, announcePageChange, setSection, logger]);
 
-  if (!state.isAuthenticated || !state.user) {
-    return null;
-  }
-
-  const navItems = [
+  // Memoized navigation items
+  const navItems = useMemo(() => [
     { id: 'dashboard', label: 'Inicio', icon: 'fas fa-home', shortcut: 'H' },
     { id: 'equipos', label: 'Equipos', icon: 'fas fa-desktop', shortcut: 'E' },
     { id: 'sucursales', label: 'Sucursales', icon: 'fas fa-building', shortcut: 'S' },
     { id: 'fallas', label: 'Fallas', icon: 'fas fa-exclamation-triangle', shortcut: 'F' },
-  ];
+  ], []);
 
   const handleSectionClick = (sectionId: string) => {
     setSection(sectionId);

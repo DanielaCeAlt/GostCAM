@@ -1,12 +1,4 @@
 {
-  "/api/catalogos/route": "app/api/catalogos/route.js",
   "/api/dashboard/route": "app/api/dashboard/route.js",
-  "/api/equipos/[no_serie]/route": "app/api/equipos/[no_serie]/route.js",
-  "/api/equipos/route": "app/api/equipos/route.js",
-  "/api/equipos/search/route": "app/api/equipos/search/route.js",
-  "/api/posiciones/route": "app/api/posiciones/route.js",
-  "/api/sucursales/route": "app/api/sucursales/route.js",
-  "/equipos/page": "app/equipos/page.js",
-  "/favicon.ico/route": "app/favicon.ico/route.js",
-  "/page": "app/page.js"
+  "/api/equipos/route": "app/api/equipos/route.js"
 }

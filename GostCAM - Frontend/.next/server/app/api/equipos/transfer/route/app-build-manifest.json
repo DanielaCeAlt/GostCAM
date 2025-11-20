@@ -1,0 +1,11 @@
+{
+  "pages": {
+    "/api/equipos/transfer/route": [
+      "static/chunks/c78379bcaeb456f7.js",
+      "static/chunks/91adb7bdb9870c6a.js",
+      "static/chunks/f471ac2339220d44.js",
+      "static/chunks/2008ffcf9e5b170c.js",
+      "static/chunks/turbopack-50a417b35e65b3c6.js"
+    ]
+  }
+}

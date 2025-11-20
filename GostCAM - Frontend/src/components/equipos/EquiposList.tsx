@@ -4,13 +4,16 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { usePaginationSwipe } from '@/hooks/useSwipeGestures';
 import { useHapticFeedback } from '@/utils/hapticFeedback';
 import { useDebounce, usePerformanceMonitor, useViewportOptimization } from '@/hooks/usePerformance';
-import MobileButton, { MobileIconButton } from '../ui/MobileButton';
+import GostCamButton, { GostCamIconButton } from '../ui/GostCamButton';
+import EquipmentStatus, { StatusIndicator } from '../ui/EquipmentStatus';
+import GostCamLayout, { GostCamSection, GostCamCard } from '../ui/GostCamLayout';
 import { VirtualizedEquipmentList } from '../ui/VirtualizedList';
 import OptimizedImage from '../ui/OptimizedImage';
 import { useEquipos } from '@/hooks/useEquipos';
 import { useApp } from '@/contexts/AppContext';
 import { SkeletonTable, SkeletonList } from '@/components/ui';
 import EquiposFiltros from './EquiposFiltros';
+import { MESSAGES, getStatusMessage } from '@/lib/messages';
 
 interface EquiposListProps {
   onEquipoSelect?: (noSerie: string) => void;
@@ -169,25 +172,27 @@ export default function EquiposList({
 
     return (
       <div className="relative">
-        <button
+        <GostCamIconButton
+          variant="ghost"
+          size="sm"
+          icon={<i className="fas fa-ellipsis-v" />}
+          ariaLabel="Más acciones"
           onClick={() => setShowMenu(!showMenu)}
-          className="text-gray-400 hover:text-gray-600 transition-colors duration-150"
-          title="Más acciones"
-        >
-          <i className="fas fa-ellipsis-v"></i>
-        </button>
+          hapticFeedback="light"
+        />
         {showMenu && (
-          <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-md shadow-lg z-20 min-w-40">
-            <div className="py-1">
+          <div className="absolute right-0 top-8 bg-white border border-gostcam-border-light rounded-xl shadow-lg z-20 min-w-48">
+            <div className="py-2">
               {onCambiarUbicacion && (
                 <button
                   onClick={() => {
                     onCambiarUbicacion(equipo.no_serie);
                     setShowMenu(false);
                   }}
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  className="block w-full text-left px-4 py-3 text-sm text-gostcam-text-primary hover:bg-gostcam-gray-100 transition-colors"
                 >
-                  <i className="fas fa-exchange-alt mr-2"></i>Trasladar
+                  <i className="fas fa-exchange-alt mr-3 text-gostcam-secondary"></i>
+                  {MESSAGES.buttons.transfer}
                 </button>
               )}
               {onMantenimiento && (

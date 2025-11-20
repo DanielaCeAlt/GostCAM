@@ -1,0 +1,89 @@
+/* ===== VARIABLES CSS PARA GOSTCAM ===== */
+:root {
+  /* Colores Principales */
+  --gostcam-primary: #1e40af;
+  --gostcam-primary-hover: #1d4ed8;
+  --gostcam-primary-active: #1e3a8a;
+  --gostcam-secondary: #059669;
+  --gostcam-secondary-hover: #047857;
+  --gostcam-secondary-active: #065f46;
+  
+  /* Estados */
+  --gostcam-success: #10b981;
+  --gostcam-success-light: #d1fae5;
+  --gostcam-success-dark: #047857;
+  --gostcam-warning: #f59e0b;
+  --gostcam-warning-light: #fef3c7;
+  --gostcam-warning-dark: #d97706;
+  --gostcam-danger: #ef4444;
+  --gostcam-danger-light: #fee2e2;
+  --gostcam-danger-dark: #dc2626;
+  --gostcam-info: #3b82f6;
+  --gostcam-info-light: #dbeafe;
+  --gostcam-info-dark: #2563eb;
+  
+  /* Grises */
+  --gostcam-gray-50: #f9fafb;
+  --gostcam-gray-100: #f3f4f6;
+  --gostcam-gray-200: #e5e7eb;
+  --gostcam-gray-300: #d1d5db;
+  --gostcam-gray-400: #9ca3af;
+  --gostcam-gray-500: #6b7280;
+  --gostcam-gray-600: #4b5563;
+  --gostcam-gray-700: #374151;
+  --gostcam-gray-800: #1f2937;
+  --gostcam-gray-900: #111827;
+  
+  /* Texto */
+  --gostcam-text-primary: #111827;
+  --gostcam-text-secondary: #6b7280;
+  --gostcam-text-muted: #9ca3af;
+  
+  /* Bordes */
+  --gostcam-border-light: #e5e7eb;
+  --gostcam-border-medium: #d1d5db;
+  --gostcam-border-strong: #9ca3af;
+  
+  /* Fondos */
+  --gostcam-bg-primary: #f9fafb;
+}
+
+/* ===== CLASES DE UTILIDAD USANDO TAILWIND ESTÁNDAR ===== */
+
+/* Estados de conexión usando colores Tailwind estándar pero con naming GostCAM */
+.status-conectado {
+  @apply bg-green-500 text-white text-xs px-2 py-1 rounded-full font-medium;
+}
+
+.status-desconectado {
+  @apply bg-yellow-500 text-white text-xs px-2 py-1 rounded-full font-medium;
+}
+
+.status-error {
+  @apply bg-red-500 text-white text-xs px-2 py-1 rounded-full font-medium;
+}
+
+.status-mantenimiento {
+  @apply bg-blue-500 text-white text-xs px-2 py-1 rounded-full font-medium;
+}
+
+/* Animación de carga personalizada */
+@keyframes wave {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-wave {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-wave::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  background-size: 200% 100%;
+  animation: wave 1.5s infinite;
+}

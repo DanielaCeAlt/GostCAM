@@ -1,7 +1,3 @@
-// =============================================
-// PÁGINA PRINCIPAL - GOSTCAM
-// =============================================
-
 'use client';
 
 import React from 'react';
@@ -12,14 +8,29 @@ import Dashboard from '@/components/Dashboard';
 import EquiposManager from '@/components/equipos/EquiposManager';
 import Sucursales from '@/components/Sucursales';
 import Fallas from '@/components/Fallas';
+import { ToastContainer, useToast } from '@/components/ui/ToastNotification';
+import { PageSkeleton } from '@/components/ui/SkeletonLoader';
 
 // Componente interno que usa el contexto
 function AppContent() {
   const { state } = useApp();
+  const { toasts, removeToast } = useToast();
 
   // Si no está autenticado, mostrar login
   if (!state.isAuthenticated) {
     return <LoginScreen />;
+  }
+
+  // Mostrar skeleton mientras carga
+  if (state.isLoading) {
+    return (
+      <div className="min-h-screen bg-gostcam-bg-primary">
+        <Navigation />
+        <main className="flex-1 p-6">
+          <PageSkeleton type="dashboard" />
+        </main>
+      </div>
+    );
   }
 
   // Renderizar contenido basado en la sección actual
@@ -28,11 +39,7 @@ function AppContent() {
       case 'dashboard':
         return <Dashboard />;
       case 'equipos':
-        return (
-          <div className="p-6">
-            <EquiposManager />
-          </div>
-        );
+        return <EquiposManager />;
       case 'sucursales':
         return <Sucursales />;
       case 'fallas':
@@ -43,12 +50,20 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-      <main className="flex-1">
-        {renderContent()}
-      </main>
-    </div>
+    <>
+      <div className="min-h-screen bg-gostcam-bg-primary">
+        <Navigation />
+        <main className="flex-1">
+          {renderContent()}
+        </main>
+      </div>
+      
+      {/* Toast Notifications */}
+      <ToastContainer 
+        toasts={toasts}
+        onRemoveToast={removeToast}
+      />
+    </>
   );
 }
 

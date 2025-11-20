@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { useLogger } from '@/lib/logger';
 import EquiposListSimple from './EquiposListSimple';
 import EquiposBusqueda from './EquiposBusqueda';
 import EquiposAlta from './EquiposAlta';
@@ -23,26 +24,63 @@ interface EquiposManagerProps {
   vistaInicial?: VistaActual;
 }
 
-export default function EquiposManager({ vistaInicial = 'lista' }: EquiposManagerProps) {
-  const [vistaActual, setVistaActual] = useState<VistaActual>(vistaInicial);
-  // Estado para equipos seleccionados y operaciones
-  const [equipoSeleccionado, setEquipoSeleccionado] = useState<string>('');
-  const [equipoParaEditar, setEquipoParaEditar] = useState<any>(null);
-  const [equipoParaCambioUbicacion, setEquipoParaCambioUbicacion] = useState<any>(null);
-  const [cargandoEquipo, setCargandoEquipo] = useState(false);
-  const [resultadosBusqueda, setResultadosBusqueda] = useState<any[]>([]);
-  
-  // Estados para modal de eliminación
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [equipoAEliminar, setEquipoAEliminar] = useState<{no_serie: string, nombreEquipo: string} | null>(null);
-  const [eliminandoEquipo, setEliminandoEquipo] = useState(false);
-  const [refreshList, setRefreshList] = useState(0);
+// Estados del componente con tipos más estrictos
+interface ManagerState {
+  vistaActual: VistaActual;
+  equipoSeleccionado: string;
+  equipoParaEditar: any | null;
+  equipoParaCambioUbicacion: any | null;
+  cargandoEquipo: boolean;
+  resultadosBusqueda: any[];
+  showDeleteModal: boolean;
+  equipoAEliminar: { no_serie: string; nombreEquipo: string } | null;
+  eliminandoEquipo: boolean;
+  refreshList: number;
+}
 
-  // Navegación entre vistas
-  const cambiarVista = useCallback((nuevaVista: VistaActual) => {
-    setVistaActual(nuevaVista);
-    setEquipoSeleccionado('');
+const INITIAL_STATE: ManagerState = {
+  vistaActual: 'lista',
+  equipoSeleccionado: '',
+  equipoParaEditar: null,
+  equipoParaCambioUbicacion: null,
+  cargandoEquipo: false,
+  resultadosBusqueda: [],
+  showDeleteModal: false,
+  equipoAEliminar: null,
+  eliminandoEquipo: false,
+  refreshList: 0,
+};
+
+export default function EquiposManager({ vistaInicial = 'lista' }: EquiposManagerProps) {
+  const logger = useLogger();
+  const [state, setState] = useState<ManagerState>({
+    ...INITIAL_STATE,
+    vistaActual: vistaInicial
+  });
+
+  // Cleanup en desmontaje para evitar memory leaks
+  useEffect(() => {
+    return () => {
+      logger.debug('EquiposManager unmounting, cleaning up...');
+      // Limpiar cualquier timeout o request pendiente
+    };
+  }, [logger]);
+
+  // Optimized state updates
+  const updateState = useCallback((updates: Partial<ManagerState>) => {
+    setState(prev => ({ ...prev, ...updates }));
   }, []);
+
+  // Navegación entre vistas optimizada
+  const cambiarVista = useCallback((nuevaVista: VistaActual) => {
+    logger.userAction('cambiar_vista', undefined, { vista: nuevaVista });
+    updateState({
+      vistaActual: nuevaVista,
+      equipoSeleccionado: '',
+      equipoParaEditar: null,
+      equipoParaCambioUbicacion: null
+    });
+  }, [logger, updateState]);
 
   // Callbacks para interacción entre componentes
   const handleEquipoSelect = useCallback((noSerie: string) => {

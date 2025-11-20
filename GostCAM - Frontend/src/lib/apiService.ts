@@ -1,8 +1,9 @@
 // =============================================
-// SERVICIO: UNIFIED API SERVICE
+// SERVICIO: UNIFIED API SERVICE OPTIMIZADO
 // =============================================
 
 import { pythonApiClient } from './pythonApiClient';
+import { logger } from './logger';
 import { 
   DashboardStats, 
   VistaEquipoCompleto, 
@@ -17,95 +18,417 @@ import {
 
 export type ApiMode = 'nextjs' | 'python';
 
+// Cache para mejorar performance
+interface CacheEntry {
+  data: unknown;
+  timestamp: number;
+  ttl: number;
+}
+
 class ApiService {
   private currentMode: ApiMode = 'nextjs';
   private token: string | null = null;
+  private cache = new Map<string, CacheEntry>();
+  private requestQueue = new Map<string, Promise<unknown>>();
 
   // Configurar modo de API
-  setMode(mode: ApiMode) {
+  setMode(mode: ApiMode): void {
     this.currentMode = mode;
-    console.log(`API Service mode set to: ${mode}`);
+    this.clearCache(); // Limpiar cache al cambiar modo
+    logger.info(`API Service mode changed to: ${mode}`, { mode });
   }
 
   // Configurar token
-  setToken(token: string | null) {
+  setToken(token: string | null): void {
     this.token = token;
     if (token && this.currentMode === 'python') {
       pythonApiClient.setToken(token);
     }
   }
 
-  // ========================
-  // MÉTODOS GENÉRICOS
-  // ========================
-  async get<T>(url: string): Promise<ApiResponse<T>> {
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(this.token && { 'Authorization': `Bearer ${this.token}` }),
-        },
-      });
-      
-      return await response.json() as ApiResponse<T>;
-    } catch (error) {
-      console.error(`GET error (${url}):`, error);
-      throw error;
-    }
+  // Cache management
+  private getCacheKey(url: string, params?: Record<string, unknown>): string {
+    return `${url}_${JSON.stringify(params || {})}`;
   }
 
-  async post<T>(url: string, data: Record<string, unknown>): Promise<ApiResponse<T>> {
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(this.token && { 'Authorization': `Bearer ${this.token}` }),
-        },
-        body: JSON.stringify(data),
-      });
-      
-      return await response.json() as ApiResponse<T>;
-    } catch (error) {
-      console.error(`POST error (${url}):`, error);
-      throw error;
+  private getFromCache<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+    
+    const now = Date.now();
+    if (now - entry.timestamp > entry.ttl) {
+      this.cache.delete(key);
+      return null;
     }
+    
+    return entry.data as T;
   }
 
-  async put<T>(url: string, data: Record<string, unknown>): Promise<ApiResponse<T>> {
-    try {
-      const response = await fetch(url, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(this.token && { 'Authorization': `Bearer ${this.token}` }),
-        },
-        body: JSON.stringify(data),
-      });
-      
-      return await response.json() as ApiResponse<T>;
-    } catch (error) {
-      console.error(`PUT error (${url}):`, error);
-      throw error;
+  private setCache<T>(key: string, data: T, ttl = 300000): void { // 5 min default
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      ttl
+    });
+  }
+
+  private clearCache(): void {
+    this.cache.clear();
+    logger.debug('API cache cleared');
+  }
+
+  // Request deduplication para evitar requests duplicados
+  private async requestWithDeduplication<T>(
+    key: string, 
+    requestFn: () => Promise<ApiResponse<T>>
+  ): Promise<ApiResponse<T>> {
+    if (this.requestQueue.has(key)) {
+      return this.requestQueue.get(key) as Promise<ApiResponse<T>>;
     }
+
+    const promise = requestFn().finally(() => {
+      this.requestQueue.delete(key);
+    });
+
+    this.requestQueue.set(key, promise);
+    return promise;
+  }
+
+  // Retry logic para requests fallidos
+  private async withRetry<T>(
+    operation: () => Promise<ApiResponse<T>>,
+    maxRetries = 3,
+    delay = 1000
+  ): Promise<ApiResponse<T>> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error as Error;
+        logger.warn(`Request failed (attempt ${attempt}/${maxRetries})`, lastError);
+        
+        if (attempt === maxRetries) break;
+        await new Promise(resolve => setTimeout(resolve, delay * attempt));
+      }
+    }
+
+    logger.error('Request failed after all retries', lastError!);
+    throw lastError;
+  }
+
+  private getHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+    
+    return headers;
+  }
+
+  // ========================
+  // MÉTODOS GENÉRICOS OPTIMIZADOS
+  // ========================
+  async get<T>(
+    url: string, 
+    useCache = false, 
+    cacheTtl = 300000
+  ): Promise<ApiResponse<T>> {
+    const cacheKey = this.getCacheKey(url);
+    
+    // Verificar cache si está habilitado
+    if (useCache) {
+      const cached = this.getFromCache<ApiResponse<T>>(cacheKey);
+      if (cached) {
+        logger.debug(`Cache hit for ${url}`);
+        return cached;
+      }
+    }
+
+    return this.requestWithDeduplication(cacheKey, async () => {
+      const startTime = Date.now();
+      
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: this.getHeaders(),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json() as ApiResponse<T>;
+        
+        // Cache si es exitoso
+        if (useCache && result.success) {
+          this.setCache(cacheKey, result, cacheTtl);
+        }
+        
+        const duration = Date.now() - startTime;
+        logger.apiRequest('GET', url, response.status);
+        logger.performance(`GET ${url}`, duration);
+        
+        return result;
+      } catch (error) {
+        const duration = Date.now() - startTime;
+        logger.apiError('GET', url, error as Error);
+        logger.performance(`GET ${url} (failed)`, duration);
+        throw error;
+      }
+    });
+  }
+
+  // Los demás métodos se implementarán de forma similar...
+  // [Continuaré en el siguiente archivo por limitaciones de espacio]
+
+  getCurrentMode(): ApiMode {
+    return this.currentMode;
+  }
+
+  isUsingNextjsApi(): boolean {
+    return this.currentMode === 'nextjs';
+  }
+}
+
+// Instancia singleton optimizada
+export const apiService = new ApiService();
+export default apiService;
+    return `${url}_${JSON.stringify(params || {})}`;
+  }
+
+  private getFromCache<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+    
+    const now = Date.now();
+    if (now - entry.timestamp > entry.ttl) {
+      this.cache.delete(key);
+      return null;
+    }
+    
+    return entry.data as T;
+  }
+
+  private setCache<T>(key: string, data: T, ttl = 300000): void { // 5 min default
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      ttl
+    });
+  }
+
+  private clearCache(): void {
+    this.cache.clear();
+    logger.debug('API cache cleared');
+  }
+
+  // Request deduplication para evitar requests duplicados
+  private async requestWithDeduplication<T>(
+    key: string, 
+    requestFn: () => Promise<ApiResponse<T>>
+  ): Promise<ApiResponse<T>> {
+    if (this.requestQueue.has(key)) {
+      return this.requestQueue.get(key) as Promise<ApiResponse<T>>;
+    }
+
+    const promise = requestFn().finally(() => {
+      this.requestQueue.delete(key);
+    });
+
+    this.requestQueue.set(key, promise);
+    return promise;
+  }
+
+  // Retry logic para requests fallidos
+  private async withRetry<T>(
+    operation: () => Promise<ApiResponse<T>>,
+    maxRetries = 3,
+    delay = 1000
+  ): Promise<ApiResponse<T>> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error as Error;
+        logger.warn(`Request failed (attempt ${attempt}/${maxRetries})`, lastError);
+        
+        if (attempt === maxRetries) break;
+        await new Promise(resolve => setTimeout(resolve, delay * attempt));
+      }
+    }
+
+    logger.error('Request failed after all retries', lastError!);
+    throw lastError;
+  }
+
+  // ========================
+  // MÉTODOS GENÉRICOS OPTIMIZADOS
+  // ========================
+  async get<T>(
+    url: string, 
+    useCache = false, 
+    cacheTtl = 300000
+  ): Promise<ApiResponse<T>> {
+    const cacheKey = this.getCacheKey(url);
+    
+    // Verificar cache si está habilitado
+    if (useCache) {
+      const cached = this.getFromCache<ApiResponse<T>>(cacheKey);
+      if (cached) {
+        logger.debug(`Cache hit for ${url}`);
+        return cached;
+      }
+    }
+
+    return this.requestWithDeduplication(cacheKey, async () => {
+      const startTime = Date.now();
+      
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: this.getHeaders(),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json() as ApiResponse<T>;
+        
+        // Cache si es exitoso
+        if (useCache && result.success) {
+          this.setCache(cacheKey, result, cacheTtl);
+        }
+        
+        const duration = Date.now() - startTime;
+        logger.apiRequest('GET', url, response.status);
+        logger.performance(`GET ${url}`, duration);
+        
+        return result;
+      } catch (error) {
+        const duration = Date.now() - startTime;
+        logger.apiError('GET', url, error as Error);
+        logger.performance(`GET ${url} (failed)`, duration);
+        throw error;
+      }
+    });
+  }
+
+  async post<T>(
+    url: string, 
+    data: Record<string, unknown>
+  ): Promise<ApiResponse<T>> {
+    return this.withRetry(async () => {
+      const startTime = Date.now();
+      
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: JSON.stringify(data),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json() as ApiResponse<T>;
+        
+        const duration = Date.now() - startTime;
+        logger.apiRequest('POST', url, response.status);
+        logger.performance(`POST ${url}`, duration);
+        
+        return result;
+      } catch (error) {
+        const duration = Date.now() - startTime;
+        logger.apiError('POST', url, error as Error);
+        logger.performance(`POST ${url} (failed)`, duration);
+        throw error;
+      }
+    });
+  }
+
+  async put<T>(
+    url: string, 
+    data: Record<string, unknown>
+  ): Promise<ApiResponse<T>> {
+    return this.withRetry(async () => {
+      const startTime = Date.now();
+      
+      try {
+        const response = await fetch(url, {
+          method: 'PUT',
+          headers: this.getHeaders(),
+          body: JSON.stringify(data),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json() as ApiResponse<T>;
+        
+        const duration = Date.now() - startTime;
+        logger.apiRequest('PUT', url, response.status);
+        logger.performance(`PUT ${url}`, duration);
+        
+        return result;
+      } catch (error) {
+        const duration = Date.now() - startTime;
+        logger.apiError('PUT', url, error as Error);
+        logger.performance(`PUT ${url} (failed)`, duration);
+        throw error;
+      }
+    });
   }
 
   async delete<T>(url: string): Promise<ApiResponse<T>> {
-    try {
-      const response = await fetch(url, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(this.token && { 'Authorization': `Bearer ${this.token}` }),
-        },
-      });
+    return this.withRetry(async () => {
+      const startTime = Date.now();
       
-      return await response.json() as ApiResponse<T>;
-    } catch (error) {
-      console.error(`DELETE error (${url}):`, error);
-      throw error;
+      try {
+        const response = await fetch(url, {
+          method: 'DELETE',
+          headers: this.getHeaders(),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json() as ApiResponse<T>;
+        
+        const duration = Date.now() - startTime;
+        logger.apiRequest('DELETE', url, response.status);
+        logger.performance(`DELETE ${url}`, duration);
+        
+        return result;
+      } catch (error) {
+        const duration = Date.now() - startTime;
+        logger.apiError('DELETE', url, error as Error);
+        logger.performance(`DELETE ${url} (failed)`, duration);
+        throw error;
+      }
+    });
+  }
+
+  private getHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
     }
+    
+    return headers;
   }
 
   // ========================

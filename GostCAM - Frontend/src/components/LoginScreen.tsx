@@ -1,41 +1,40 @@
-// =============================================
-// COMPONENTE: LOGIN SCREEN
-// =============================================
-
 'use client';
 
 import React, { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import LoginScreenImproved from '@/components/auth/LoginScreenImproved';
+import { MESSAGES } from '@/lib/messages';
 
 export default function LoginScreen() {
-  const { login, state } = useApp();
-  const [formData, setFormData] = useState({
-    correo: '',
-    contraseña: ''
-  });
-  const [showPassword, setShowPassword] = useState(false);
+  const { login } = useApp();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (email: string, password: string) => {
+    setLoading(true);
+    setError('');
     
-    if (!formData.correo || !formData.contraseña) {
-      return;
-    }
-
-    const success = await login(formData.correo, formData.contraseña);
-    
-    if (!success) {
-      // El error ya se maneja en el contexto
-      console.log('Login fallido');
+    try {
+      const success = await login(email, password);
+      if (!success) {
+        setError(MESSAGES.error.login);
+      }
+    } catch (err) {
+      setError(MESSAGES.error.login);
+      throw err;
+    } finally {
+      setLoading(false);
     }
   };
+
+  return (
+    <LoginScreenImproved 
+      onLogin={handleLogin}
+      isLoading={loading}
+      error={error}
+    />
+  );
+}
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center p-4">

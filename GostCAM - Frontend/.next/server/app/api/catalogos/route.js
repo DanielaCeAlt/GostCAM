@@ -1,10 +1,7 @@
 var R=require("../../../chunks/[turbopack]_runtime.js")("server/app/api/catalogos/route.js")
-R.c("server/chunks/node_modules_next_911ff000._.js")
-R.c("server/chunks/node_modules_mysql2_84e924d7._.js")
-R.c("server/chunks/node_modules_iconv-lite_a4444554._.js")
-R.c("server/chunks/node_modules_aws-ssl-profiles_lib_7ad223da._.js")
-R.c("server/chunks/node_modules_bec30ffe._.js")
-R.c("server/chunks/[root-of-the-server]__ee732457._.js")
-R.m("[project]/.next-internal/server/app/api/catalogos/route/actions.js [app-rsc] (server actions loader, ecmascript)")
-R.m("[project]/node_modules/next/dist/esm/build/templates/app-route.js { INNER_APP_ROUTE => \"[project]/src/app/api/catalogos/route.ts [app-route] (ecmascript)\" } [app-route] (ecmascript)")
-module.exports=R.m("[project]/node_modules/next/dist/esm/build/templates/app-route.js { INNER_APP_ROUTE => \"[project]/src/app/api/catalogos/route.ts [app-route] (ecmascript)\" } [app-route] (ecmascript)").exports
+R.c("server/chunks/[root-of-the-server]__8bba870e._.js")
+R.c("server/chunks/[root-of-the-server]__8f5ebbc3._.js")
+R.c("server/chunks/node_modules_next_48b9435f._.js")
+R.m(85920)
+R.m(42282)
+module.exports=R.m(42282).exports

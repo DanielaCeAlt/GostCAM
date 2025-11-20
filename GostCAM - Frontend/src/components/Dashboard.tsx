@@ -8,6 +8,9 @@ import React, { useEffect, useState } from 'react';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { useApp } from '@/contexts/AppContext';
+import GostCamLayout, { GostCamSection, GostCamGrid, GostCamCard } from '@/components/ui/GostCamLayout';
+import GostCamButton from '@/components/ui/GostCamButton';
+import { MESSAGES, getLoadingMessage } from '@/lib/messages';
 
 // Registrar componentes de Chart.js
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
@@ -24,30 +27,53 @@ export default function Dashboard() {
 
   if (state.isLoading) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="flex items-center space-x-2">
-            <i className="fas fa-spinner fa-spin text-blue-600 text-xl"></i>
-            <span className="text-gray-600">Cargando dashboard...</span>
-          </div>
+      <GostCamLayout 
+        title={getLoadingMessage('dashboard')}
+        padding="lg"
+        maxWidth="6xl"
+      >
+        <div className="animate-pulse space-y-8">
+          <GostCamGrid columns={4} gap="lg">
+            {[...Array(4)].map((_, i) => (
+              <GostCamCard key={i} className="h-24">
+                <div className="h-full bg-gostcam-gray-200 rounded-lg animate-wave"></div>
+              </GostCamCard>
+            ))}
+          </GostCamGrid>
         </div>
-      </div>
+      </GostCamLayout>
     );
   }
 
   if (state.error) {
     return (
-      <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <div className="flex">
-            <i className="fas fa-exclamation-circle text-red-400 mt-0.5 mr-2"></i>
-            <div>
-              <h3 className="text-sm font-medium text-red-800">Error cargando dashboard</h3>
-              <p className="text-sm text-red-700 mt-1">{state.error}</p>
+      <GostCamLayout padding="lg" maxWidth="4xl">
+        <GostCamCard className="border-gostcam-danger bg-gostcam-danger-light">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <div className="w-10 h-10 bg-gostcam-danger rounded-full flex items-center justify-center">
+                <i className="fas fa-exclamation-triangle text-white"></i>
+              </div>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-gostcam-danger mb-2">
+                Problema de conexión
+              </h3>
+              <p className="text-gostcam-danger-dark mb-4">
+                {state.error}
+              </p>
+              <GostCamButton 
+                variant="danger" 
+                size="sm" 
+                onClick={() => window.location.reload()}
+                leftIcon={<i className="fas fa-redo" />}
+              >
+                {MESSAGES.buttons.retry || 'Reintentar'}
+              </GostCamButton>
             </div>
           </div>
-        </div>
-      </div>
+        </GostCamCard>
+      </GostCamLayout>
     );
   }
 
@@ -139,15 +165,31 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Contenido dinámico según la vista */}
-      {vistaActual === 'resumen' && (
-        <>
-          {/* Controles de actualización */}
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold text-gray-900">Resumen del Sistema</h2>
-            <div className="flex space-x-2">
-              <button
+    <GostCamLayout 
+      title={MESSAGES.titles.dashboard || 'Panel de Control GostCAM'}
+      subtitle={`Bienvenido de vuelta, ${state.user?.nombre || 'Usuario'}. Aquí tienes un resumen de tu red de seguridad.`}
+      actions={
+        <div className="flex space-x-2">
+          <GostCamButton 
+            variant="secondary" 
+            onClick={loadDashboardStats}
+            leftIcon={<i className="fas fa-sync-alt" />}
+            hapticFeedback="medium"
+          >
+            Actualizar
+          </GostCamButton>
+          <GostCamButton
+            variant="primary"
+            onClick={testAltaEquipo}
+            leftIcon={<i className="fas fa-plus" />}
+          >
+            Test Alta Equipo
+          </GostCamButton>
+        </div>
+      }
+      padding="lg"
+      maxWidth="6xl"
+    >
                 onClick={() => loadDashboardStats()}
                 className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
               >
@@ -290,7 +332,7 @@ export default function Dashboard() {
         </>
       )}
 
-
-    </div>
+    </GostCamLayout>
   );
+}
 }
