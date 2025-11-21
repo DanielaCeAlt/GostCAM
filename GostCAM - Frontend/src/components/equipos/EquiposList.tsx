@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { usePaginationSwipe } from '@/hooks/useSwipeGestures';
 import { useHapticFeedback } from '@/utils/hapticFeedback';
 import { useDebounce, usePerformanceMonitor, useViewportOptimization } from '@/hooks/usePerformance';
@@ -68,8 +68,25 @@ export default function EquiposList({
   
   // Performance optimization hooks
   const debouncedSearchTerm = useDebounce(filtros.texto, 300);
-  const performanceMonitor = usePerformanceMonitor();
-  const { isVisible, elementRef: viewportRef } = useViewportOptimization();
+  const performanceMonitor = usePerformanceMonitor('EquiposList');
+  const { isVisible } = useViewportOptimization();
+  const viewportRef = useRef<HTMLDivElement>(null);
+  
+  // Función para cambiar página (definida antes de usePaginationSwipe)
+  const handleCambiarPagina = useCallback((nuevaPagina: number) => {
+    const filtrosBusqueda = {
+      ...filtros,
+      pagina: nuevaPagina,
+      tipoEquipo: '',
+      estatus: '',
+      sucursal: '',
+      usuarioAsignado: '',
+      fechaAltaDesde: '',
+      fechaAltaHasta: ''
+    };
+    setFiltros(prev => ({ ...prev, pagina: nuevaPagina }));
+    buscarEquipos(filtrosBusqueda);
+  }, [filtros, buscarEquipos]);
   
   // Configurar gestos swipe para paginación
   const { elementRef: paginationSwipeRef, isSwipeDetected } = usePaginationSwipe(
@@ -88,7 +105,7 @@ export default function EquiposList({
       if (!debouncedSearchTerm) return true;
       const searchLower = debouncedSearchTerm.toLowerCase();
       return equipo.no_serie.toLowerCase().includes(searchLower) ||
-             equipo.NombreEquipo?.toLowerCase().includes(searchLower) ||
+             equipo.nombreEquipo?.toLowerCase().includes(searchLower) ||
              equipo.TipoEquipo?.toLowerCase().includes(searchLower) ||
              equipo.SucursalActual?.toLowerCase().includes(searchLower);
     });
@@ -252,7 +269,7 @@ export default function EquiposList({
             onChange={(e) => handleSelectEquipo(equipo.no_serie, e.target.checked)}
           />
           <OptimizedImage
-            src={equipo.ImagenUbicacion}
+            src={'/placeholder-equipment.png'}
             alt={`${equipo.nombreEquipo || 'Equipo'} - ${equipo.no_serie}`}
             width={32}
             height={32}
@@ -314,20 +331,7 @@ export default function EquiposList({
     );
   });
 
-  const handleCambiarPagina = (nuevaPagina: number) => {
-    const filtrosBusqueda = {
-      ...filtros,
-      pagina: nuevaPagina,
-      tipoEquipo: '',
-      estatus: '',
-      sucursal: '',
-      usuarioAsignado: '',
-      fechaAltaDesde: '',
-      fechaAltaHasta: ''
-    };
-    setFiltros(prev => ({ ...prev, pagina: nuevaPagina }));
-    buscarEquipos(filtrosBusqueda);
-  };
+
 
   return (
     <div className="space-y-6">
@@ -341,8 +345,8 @@ export default function EquiposList({
             {isVisible && performanceMonitor && (
               <div className="mt-2 text-xs space-y-1">
                 <div>Render Time: {performanceMonitor.renderTime}ms</div>
-                <div>Memory Usage: {performanceMonitor.memoryUsage}MB</div>
-                <div>Component Renders: {performanceMonitor.componentRenders}</div>
+                <div>Render Time: {performanceMonitor.renderTime}ms</div>
+                <div>Re-renders: {performanceMonitor.rerenders}</div>
                 <div>Items Displayed: {filteredEquipos.length} / {equipos.length}</div>
                 <div>Search Term: "{debouncedSearchTerm}"</div>
               </div>
@@ -424,31 +428,86 @@ export default function EquiposList({
           </div>
         ) : (
           <>
-            {/* Vista de escritorio - Tabla virtualizada mejorada */}
+            {/* Vista de escritorio - Tabla simple */}
             <div className="hidden lg:block" ref={viewportRef}>
-              <VirtualizedEquipmentList
-                equipment={filteredEquipos}
-                onSelect={(noSerie, selected) => handleSelectEquipo(noSerie, selected)}
-                selectedItems={equiposSeleccionados}
-                onSelectAll={(checked) => handleSelectAll(checked)}
-                isAllSelected={equiposSeleccionados.length === filteredEquipos.length && filteredEquipos.length > 0}
-                onEdit={onEditarEquipo}
-                onDelete={onEliminarEquipo}
-                onViewDetails={onVerDetalles}
-                onChangeLocation={onCambiarUbicacion}
-                onMaintenance={onMantenimiento}
-                onViewHistory={onVerHistorial}
-                renderImage={(equipo) => (
-                  <OptimizedImage
-                    src={equipo.ImagenUbicacion}
-                    alt={`${equipo.nombreEquipo || 'Equipo'} - ${equipo.no_serie}`}
-                    width={40}
-                    height={40}
-                    className="rounded-full object-cover"
-                    fallback="/placeholder-equipment.jpg"
-                  />
-                )}
-              />
+              <div className="bg-white shadow overflow-hidden sm:rounded-md">
+                <table className="min-w-full">
+                  <thead>
+                    <tr>
+                      <th className="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Equipo
+                      </th>
+                      <th className="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Tipo
+                      </th>
+                      <th className="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Estado
+                      </th>
+                      <th className="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ubicación
+                      </th>
+                      <th className="px-6 py-3 border-b border-gray-200 bg-gray-50 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredEquipos.map((equipo, index) => (
+                      <tr key={equipo.no_serie || index} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <OptimizedImage
+                              src={'/placeholder-equipment.png'}
+                              alt={`${equipo.nombreEquipo || 'Equipo'} - ${equipo.no_serie}`}
+                              width={40}
+                              height={40}
+                              className="rounded object-cover border border-gray-200 mr-3"
+                              fallback="/placeholder-equipment.jpg"
+                            />
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{equipo.nombreEquipo}</div>
+                              <div className="text-sm text-gray-500">{equipo.no_serie}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {equipo.TipoEquipo}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            equipo.EstatusEquipo === 'ACTIVO' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {equipo.EstatusEquipo}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {equipo.SucursalActual}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex justify-end space-x-2">
+                            {onVerDetalles && (
+                              <button
+                                onClick={() => onVerDetalles(equipo.no_serie)}
+                                className="text-blue-600 hover:text-blue-900"
+                              >
+                                Ver
+                              </button>
+                            )}
+                            {onEditarEquipo && (
+                              <button
+                                onClick={() => onEditarEquipo(equipo.no_serie)}
+                                className="text-indigo-600 hover:text-indigo-900"
+                              >
+                                Editar
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* Vista móvil/tablet - Cards optimizada */}
@@ -475,7 +534,7 @@ export default function EquiposList({
             
             {/* Paginación móvil mejorada */}
             <div className="flex-1 flex justify-between sm:hidden">
-              <MobileButton
+              <GostCamButton
                 onClick={() => handleCambiarPagina(paginacion.paginaActual - 1)}
                 disabled={!paginacion.hayAnterior}
                 variant="outline"
@@ -484,7 +543,7 @@ export default function EquiposList({
                 hapticFeedback="light"
               >
                 Anterior
-              </MobileButton>
+              </GostCamButton>
               
               {/* Indicador de página actual en móvil */}
               <div className="flex items-center space-x-2">
@@ -493,7 +552,7 @@ export default function EquiposList({
                 </span>
               </div>
               
-              <MobileButton
+              <GostCamButton
                 onClick={() => handleCambiarPagina(paginacion.paginaActual + 1)}
                 disabled={!paginacion.haySiguiente}
                 variant="outline"
@@ -502,7 +561,7 @@ export default function EquiposList({
                 hapticFeedback="light"
               >
                 Siguiente
-              </MobileButton>
+              </GostCamButton>
             </div>
 
             {/* Paginación desktop */}
@@ -524,7 +583,7 @@ export default function EquiposList({
               </div>
               <div>
                 <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                  <MobileIconButton
+                  <GostCamIconButton
                     onClick={() => handleCambiarPagina(paginacion.paginaActual - 1)}
                     disabled={!paginacion.hayAnterior}
                     variant="outline"
@@ -539,7 +598,7 @@ export default function EquiposList({
                   {Array.from({ length: Math.min(5, paginacion.totalPaginas) }, (_, i) => {
                     const pageNum = i + 1;
                     return (
-                      <MobileButton
+                      <GostCamButton
                         key={pageNum}
                         onClick={() => handleCambiarPagina(pageNum)}
                         variant={pageNum === paginacion.paginaActual ? "primary" : "outline"}
@@ -548,11 +607,11 @@ export default function EquiposList({
                         hapticFeedback="light"
                       >
                         {pageNum}
-                      </MobileButton>
+                      </GostCamButton>
                     );
                   })}
                   
-                  <MobileIconButton
+                  <GostCamIconButton
                     onClick={() => handleCambiarPagina(paginacion.paginaActual + 1)}
                     disabled={!paginacion.haySiguiente}
                     variant="outline"

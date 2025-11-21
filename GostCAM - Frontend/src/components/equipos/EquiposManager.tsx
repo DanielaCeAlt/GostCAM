@@ -58,6 +58,64 @@ export default function EquiposManager({ vistaInicial = 'lista' }: EquiposManage
     vistaActual: vistaInicial
   });
 
+  // Desestructurar el estado para acceso directo
+  const {
+    vistaActual,
+    equipoSeleccionado,
+    equipoParaEditar,
+    equipoParaCambioUbicacion,
+    cargandoEquipo,
+    resultadosBusqueda,
+    showDeleteModal,
+    equipoAEliminar,
+    eliminandoEquipo,
+    refreshList
+  } = state;
+
+  // Funciones setter individuales
+  const setVistaActual = useCallback((vista: VistaActual) => {
+    setState(prev => ({ ...prev, vistaActual: vista }));
+  }, []);
+
+  const setEquipoSeleccionado = useCallback((noSerie: string) => {
+    setState(prev => ({ ...prev, equipoSeleccionado: noSerie }));
+  }, []);
+
+  const setEquipoParaEditar = useCallback((equipo: any) => {
+    setState(prev => ({ ...prev, equipoParaEditar: equipo }));
+  }, []);
+
+  const setEquipoParaCambioUbicacion = useCallback((equipo: any) => {
+    setState(prev => ({ ...prev, equipoParaCambioUbicacion: equipo }));
+  }, []);
+
+  const setCargandoEquipo = useCallback((loading: boolean) => {
+    setState(prev => ({ ...prev, cargandoEquipo: loading }));
+  }, []);
+
+  const setResultadosBusqueda = useCallback((resultados: any[]) => {
+    setState(prev => ({ ...prev, resultadosBusqueda: resultados }));
+  }, []);
+
+  const setShowDeleteModal = useCallback((show: boolean) => {
+    setState(prev => ({ ...prev, showDeleteModal: show }));
+  }, []);
+
+  const setEquipoAEliminar = useCallback((equipo: { no_serie: string; nombreEquipo: string } | null) => {
+    setState(prev => ({ ...prev, equipoAEliminar: equipo }));
+  }, []);
+
+  const setEliminandoEquipo = useCallback((eliminando: boolean) => {
+    setState(prev => ({ ...prev, eliminandoEquipo: eliminando }));
+  }, []);
+
+  const setRefreshList = useCallback((refresh: number | ((prev: number) => number)) => {
+    setState(prev => ({ 
+      ...prev, 
+      refreshList: typeof refresh === 'function' ? refresh(prev.refreshList) : refresh 
+    }));
+  }, []);
+
   // Cleanup en desmontaje para evitar memory leaks
   useEffect(() => {
     return () => {

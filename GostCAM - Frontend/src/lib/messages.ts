@@ -87,7 +87,7 @@ export const MESSAGES = {
 
   // ===== TÍTULOS Y SECCIONES =====
   titles: {
-    dashboard: 'Panel de Control GostCAM',
+    dashboard: 'Panel de Control',
     equipments: 'Mis Equipos',
     branches: 'Red de Sucursales',
     settings: 'Configuración',

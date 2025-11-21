@@ -193,11 +193,8 @@ class ApiService {
   isUsingNextjsApi(): boolean {
     return this.currentMode === 'nextjs';
   }
-}
 
-// Instancia singleton optimizada
-export const apiService = new ApiService();
-export default apiService;
+  private getCacheKey(url: string, params?: any): string {
     return `${url}_${JSON.stringify(params || {})}`;
   }
 

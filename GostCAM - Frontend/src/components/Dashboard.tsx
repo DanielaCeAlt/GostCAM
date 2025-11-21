@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { useApp } from '@/contexts/AppContext';
@@ -18,12 +18,24 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend,
 export default function Dashboard() {
   const { state, loadDashboardStats, testAltaEquipo } = useApp();
   const [vistaActual, setVistaActual] = useState<'resumen'>('resumen');
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+
+  // Función separada para el botón de actualizar manual
+  const handleRefresh = useCallback(async () => {
+    await loadDashboardStats();
+  }, [loadDashboardStats]);
+
+  // Memoizar la función de carga inicial para evitar re-renders innecesarios
+  const handleInitialLoad = useCallback(async () => {
+    if (state.isAuthenticated && !hasLoadedOnce && !state.dashboardStats) {
+      await loadDashboardStats();
+      setHasLoadedOnce(true);
+    }
+  }, [state.isAuthenticated, hasLoadedOnce, state.dashboardStats, loadDashboardStats]);
 
   useEffect(() => {
-    if (state.isAuthenticated) {
-      loadDashboardStats();
-    }
-  }, [state.isAuthenticated]);
+    handleInitialLoad();
+  }, [handleInitialLoad]);
 
   if (state.isLoading) {
     return (
@@ -81,7 +93,7 @@ export default function Dashboard() {
 
   if (!stats) {
     return (
-      <div className="p-6">
+      <div className="p-4">
         <div className="text-center text-gray-500">
           No hay datos disponibles
         </div>
@@ -133,7 +145,7 @@ export default function Dashboard() {
         data: stats.estatusPorcentajes.map(item => item.porcentaje),
         backgroundColor: stats.estatusPorcentajes.map(item => item.color),
         borderWidth: 2,
-        borderColor: '#ffffff',
+        borderColor: '#bbbbbbff',
       },
     ],
   };
@@ -166,40 +178,23 @@ export default function Dashboard() {
 
   return (
     <GostCamLayout 
-      title={MESSAGES.titles.dashboard || 'Panel de Control GostCAM'}
-      subtitle={`Bienvenido de vuelta, ${state.user?.nombre || 'Usuario'}. Aquí tienes un resumen de tu red de seguridad.`}
+      title={MESSAGES.titles.dashboard || 'Panel de Control'}
+      subtitle={`Bienvenido, ${state.user?.NombreUsuario || 'Usuario'}, aquí tienes un resumen.`}
       actions={
         <div className="flex space-x-2">
-          <GostCamButton 
-            variant="secondary" 
-            onClick={loadDashboardStats}
-            leftIcon={<i className="fas fa-sync-alt" />}
-            hapticFeedback="medium"
+          <button
+            onClick={handleRefresh}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
           >
+            <i className="fas fa-sync-alt mr-2"></i>
             Actualizar
-          </GostCamButton>
-          <GostCamButton
-            variant="primary"
-            onClick={testAltaEquipo}
-            leftIcon={<i className="fas fa-plus" />}
-          >
-            Test Alta Equipo
-          </GostCamButton>
+          </button>
         </div>
       }
       padding="lg"
       maxWidth="6xl"
     >
-                onClick={() => loadDashboardStats()}
-                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-              >
-                <i className="fas fa-sync-alt mr-2"></i>
-                Actualizar
-              </button>
-
-            </div>
-          </div>
-
+      <div className="space-y-2">
           {/* Tarjetas de estadísticas */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Total de equipos */}
@@ -329,10 +324,7 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-        </>
-      )}
-
+      </div>
     </GostCamLayout>
   );
-}
 }

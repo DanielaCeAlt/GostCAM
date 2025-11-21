@@ -1,60 +1,63 @@
-import type { Config } from 'tailwindcss';
+import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: [
-    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/hooks/**/*.{js,ts,jsx,tsx}',
-    './src/contexts/**/*.{js,ts,jsx,tsx}',
-    './src/lib/**/*.{js,ts,jsx,tsx}',
+    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
       colors: {
-        background: 'var(--background)',
-        foreground: 'var(--foreground)',
-        // ===== COLORES GOSTCAM =====
-        'gostcam': {
-          'primary': 'var(--gostcam-primary)',
-          'primary-hover': 'var(--gostcam-primary-hover)',
-          'primary-active': 'var(--gostcam-primary-active)',
-          'secondary': 'var(--gostcam-secondary)',
-          'secondary-hover': 'var(--gostcam-secondary-hover)',
-          'secondary-active': 'var(--gostcam-secondary-active)',
-          'success': 'var(--gostcam-success)',
-          'success-light': 'var(--gostcam-success-light)',
-          'success-dark': 'var(--gostcam-success-dark)',
-          'warning': 'var(--gostcam-warning)',
-          'warning-light': 'var(--gostcam-warning-light)',
-          'warning-dark': 'var(--gostcam-warning-dark)',
-          'danger': 'var(--gostcam-danger)',
-          'danger-light': 'var(--gostcam-danger-light)',
-          'danger-dark': 'var(--gostcam-danger-dark)',
-          'info': 'var(--gostcam-info)',
-          'info-light': 'var(--gostcam-info-light)',
-          'info-dark': 'var(--gostcam-info-dark)',
-          'text-primary': 'var(--gostcam-text-primary)',
-          'text-secondary': 'var(--gostcam-text-secondary)',
-          'text-muted': 'var(--gostcam-text-muted)',
-          'border-light': 'var(--gostcam-border-light)',
-          'border-medium': 'var(--gostcam-border-medium)',
-          'border-strong': 'var(--gostcam-border-strong)',
-          'gray': {
-            50: 'var(--gostcam-gray-50)',
-            100: 'var(--gostcam-gray-100)',
-            200: 'var(--gostcam-gray-200)',
-            300: 'var(--gostcam-gray-300)',
-            400: 'var(--gostcam-gray-400)',
-            500: 'var(--gostcam-gray-500)',
-            600: 'var(--gostcam-gray-600)',
-            700: 'var(--gostcam-gray-700)',
-            800: 'var(--gostcam-gray-800)',
-            900: 'var(--gostcam-gray-900)',
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+        primary: {
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+          800: '#1e40af',
+          900: '#1e3a8a',
+        },
+        secondary: {
+          50: '#f8fafc',
+          100: '#f1f5f9',
+          200: '#e2e8f0',
+          300: '#cbd5e1',
+          400: '#94a3b8',
+          500: '#64748b',
+          600: '#475569',
+          700: '#334155',
+          800: '#1e293b',
+          900: '#0f172a',
+        }
       },
-      screens: {
-        'xs': '475px',
-        '3xl': '1600px',
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
+      },
+      animation: {
+        'fade-in': 'fadeIn 0.5s ease-in-out',
+        'slide-up': 'slideUp 0.3s ease-out',
+        'bounce-gentle': 'bounceGentle 2s infinite',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        slideUp: {
+          '0%': { transform: 'translateY(10px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        bounceGentle: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-4px)' },
+        }
       },
       boxShadow: {
         'glow': '0 0 15px rgba(59, 130, 246, 0.5)',
@@ -63,7 +66,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: []
 };
 
 export default config;

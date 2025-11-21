@@ -199,9 +199,6 @@ const GostCamButton = forwardRef<HTMLButtonElement, GostCamButtonProps>(
         tabIndex={disabled ? -1 : 0}
         {...props}
       >
-        {/* Overlay de brillo sutil para mejor feedback visual */}
-        <div className="absolute inset-0 bg-white opacity-0 hover:opacity-10 transition-opacity duration-200 rounded-xl" />
-        
         {renderContent()}
       </button>
     );

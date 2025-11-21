@@ -243,8 +243,8 @@ export const ZoomableImage: React.FC<OptimizedImageProps & {
       >
         <OptimizedImage {...props} />
         {enableZoom && (
-          <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all duration-200 flex items-center justify-center opacity-0 hover:opacity-100">
-            <i className="fas fa-search-plus text-white text-xl"></i>
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200">
+            <i className="fas fa-search-plus text-white text-xl drop-shadow-lg"></i>
           </div>
         )}
       </div>

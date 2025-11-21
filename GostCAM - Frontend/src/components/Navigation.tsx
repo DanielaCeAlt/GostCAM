@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useLogger } from '@/lib/logger';
 import { useKeyboardNavigation, useAriaAnnouncements } from '@/hooks/useAccessibility';
@@ -60,7 +60,7 @@ export default function Navigation() {
         if (sectionId) {
           e.preventDefault();
           setSection(sectionId);
-          const navItem = navItems.find(item => item.id === sectionId);
+          const navItem = navItems.find((item: any) => item.id === sectionId);
           if (navItem) {
             announcePageChange(navItem.label);
             logger.userAction('keyboard_navigation', undefined, { section: sectionId });
@@ -96,7 +96,7 @@ export default function Navigation() {
   const handleSectionClick = (sectionId: string) => {
     setSection(sectionId);
     setIsMobileMenuOpen(false);
-    const selectedItem = navItems.find(item => item.id === sectionId);
+    const selectedItem = navItems.find((item: any) => item.id === sectionId);
     if (selectedItem) {
       announcePageChange(selectedItem.label);
     }
@@ -184,19 +184,19 @@ export default function Navigation() {
               <div className="text-right hidden lg:block">
                 <div 
                   className="text-sm font-medium text-gray-900 truncate max-w-32"
-                  aria-label={`Usuario: ${state.user.NombreUsuario}`}
+                  aria-label={`Usuario: ${state.user?.NombreUsuario || 'Usuario'}`}
                 >
-                  {state.user.NombreUsuario}
+                  {state.user?.NombreUsuario || 'Usuario'}
                 </div>
                 <div 
                   className="text-xs text-gray-500 truncate"
-                  aria-label={`Nivel de acceso: ${state.user.NivelNombre || `Nivel ${state.user.NivelUsuario}`}`}
+                  aria-label={`Nivel de acceso: ${state.user?.NivelNombre || `Nivel ${state.user?.NivelUsuario || '1'}`}`}
                 >
-                  {state.user.NivelNombre || `Nivel ${state.user.NivelUsuario}`}
+                  {state.user?.NivelNombre || `Nivel ${state.user?.NivelUsuario || '1'}`}
                 </div>
               </div>
               <div 
-                className={`px-2 py-1 rounded-full text-xs font-medium ${getUserRoleColor(state.user.NivelUsuario)} min-w-max`}
+                className={`px-2 py-1 rounded-full text-xs font-medium ${getUserRoleColor(state.user?.NivelUsuario || 1)} min-w-max`}
                 role="status"
                 aria-label="Rol de usuario: Administrador"
               >
@@ -261,19 +261,19 @@ export default function Navigation() {
               <div className="min-w-0 flex-1">
                 <div 
                   className="text-sm font-medium text-gray-900 truncate"
-                  aria-label={`Usuario: ${state.user.NombreUsuario}`}
+                  aria-label={`Usuario: ${state.user?.NombreUsuario || 'Usuario'}`}
                 >
-                  {state.user.NombreUsuario}
+                  {state.user?.NombreUsuario || 'Usuario'}
                 </div>
                 <div 
                   className="text-xs text-gray-500 truncate"
-                  aria-label={`Correo: ${state.user.Correo}`}
+                  aria-label={`Correo: ${state.user?.Correo || 'Sin correo'}`}
                 >
-                  {state.user.Correo}
+                  {state.user?.Correo || 'Sin correo'}
                 </div>
               </div>
               <div 
-                className={`px-2 py-1 rounded-full text-xs font-medium ${getUserRoleColor(state.user.NivelUsuario)} ml-2 flex-shrink-0`}
+                className={`px-2 py-1 rounded-full text-xs font-medium ${getUserRoleColor(state.user?.NivelUsuario || 1)} ml-2 flex-shrink-0`}
                 role="status"
                 aria-label="Rol: Administrador"
               >

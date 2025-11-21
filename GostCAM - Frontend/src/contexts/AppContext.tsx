@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import { DashboardStats, LoginResponse, VistaEquipoCompleto, VistaMovimientoDetallado } from '@/types/database';
 import { apiService } from '@/lib/apiService';
 
@@ -217,7 +217,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ========================
   // FUNCIONES DE DATOS
   // ========================
-  const loadDashboardStats = async () => {
+  const loadDashboardStats = useCallback(async () => {
     if (!state.token) return;
     
     try {
@@ -240,9 +240,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  };
+  }, [state.token, state.apiMode]);
 
-  const loadEquipos = async (filters?: any) => {
+  const loadEquipos = useCallback(async (filters?: any) => {
     if (!state.token) return;
     
     try {
@@ -265,7 +265,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  };
+  }, [state.token, state.apiMode]);
 
   const loadMovimientos = async (filters?: any) => {
     if (!state.token) return;
