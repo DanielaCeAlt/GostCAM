@@ -2,34 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import EquiposEditar from './EquiposEditar';
-import { 
-  Chart as ChartJS, 
-  CategoryScale, 
-  LinearScale, 
-  BarElement, 
-  Title, 
-  Tooltip, 
-  Legend,
-  ArcElement,
-  LineElement,
-  PointElement,
-  TimeScale
-} from 'chart.js';
-import { Bar, Doughnut, Line } from 'react-chartjs-2';
-
-// Registrar componentes de Chart.js
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement,
-  LineElement,
-  PointElement,
-  TimeScale
-);
+import '@/lib/chartConfig'; // Import centralized Chart.js config
+import { StatCard, DetailCard } from '@/components/Dashboard/DashboardStats';
+import { MovimientosPorTipoChart, ActividadMensualChart } from '@/components/Dashboard/DashboardCharts';
 
 interface EquipoDashboardProps {
   noSerie: string;
@@ -169,29 +144,9 @@ export default function EquipoDashboard({ noSerie, onVolver }: EquipoDashboardPr
     }
   };
 
-  // Configuración para gráfico de movimientos por tipo
-  const getMovimientosPorTipoData = () => {
-    if (!data?.estadisticas) return null;
-
-    const { totalTraslados, totalMantenimientos, totalReparaciones } = data.estadisticas;
-
-    return {
-      labels: ['Traslados', 'Mantenimientos', 'Reparaciones'],
-      datasets: [
-        {
-          label: 'Cantidad',
-          data: [totalTraslados, totalMantenimientos, totalReparaciones],
-          backgroundColor: ['#3B82F6', '#F59E0B', '#EF4444'],
-          borderColor: ['#2563EB', '#D97706', '#DC2626'],
-          borderWidth: 1
-        }
-      ]
-    };
-  };
-
   // Configuración para gráfico de actividad mensual (últimos 6 meses)
   const getActividadMensualData = () => {
-    if (!data?.historial) return null;
+    if (!data?.historial) return {};
 
     // Agrupar movimientos por mes
     const movimientosPorMes: { [key: string]: number } = {};
@@ -206,22 +161,7 @@ export default function EquipoDashboard({ noSerie, onVolver }: EquipoDashboardPr
       }
     });
 
-    const meses = Object.keys(movimientosPorMes).sort();
-    const valores = meses.map(mes => movimientosPorMes[mes]);
-
-    return {
-      labels: meses,
-      datasets: [
-        {
-          label: 'Movimientos',
-          data: valores,
-          borderColor: '#3B82F6',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          tension: 0.4,
-          fill: true
-        }
-      ]
-    };
+    return movimientosPorMes;
   };
 
   if (loading) {
@@ -302,105 +242,59 @@ export default function EquipoDashboard({ noSerie, onVolver }: EquipoDashboardPr
 
         {/* Información básica en tarjetas */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Modelo</p>
-                <p className="text-lg font-semibold text-gray-900">{equipo.modelo}</p>
-              </div>
-              <i className="fas fa-laptop text-blue-500 text-xl"></i>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Tipo</p>
-                <p className="text-lg font-semibold text-gray-900">{equipo.TipoEquipo}</p>
-              </div>
-              <i className="fas fa-tag text-green-500 text-xl"></i>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Días en Sistema</p>
-                <p className="text-lg font-semibold text-gray-900">{equipo.diasEnSistema}</p>
-              </div>
-              <i className="fas fa-calendar text-orange-500 text-xl"></i>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">No. Activo</p>
-                <p className="text-lg font-semibold text-gray-900">{equipo.numeroActivo}</p>
-              </div>
-              <i className="fas fa-barcode text-purple-500 text-xl"></i>
-            </div>
-          </div>
+          <DetailCard
+            icon="fa-laptop"
+            iconColor="text-blue-500"
+            value={equipo.modelo}
+            label="Modelo"
+          />
+          <DetailCard
+            icon="fa-tag"
+            iconColor="text-green-500"
+            value={equipo.TipoEquipo}
+            label="Tipo"
+          />
+          <DetailCard
+            icon="fa-calendar"
+            iconColor="text-orange-500"
+            value={equipo.diasEnSistema.toString()}
+            label="Días en Sistema"
+          />
+          <DetailCard
+            icon="fa-barcode"
+            iconColor="text-purple-500"
+            value={equipo.numeroActivo}
+            label="No. Activo"
+          />
         </div>
       </div>
 
       {/* Estadísticas principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-blue-600 rounded-md flex items-center justify-center">
-                <i className="fas fa-exchange-alt text-white text-sm"></i>
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Movimientos</p>
-              <p className="text-2xl font-bold text-gray-900">{estadisticas.totalMovimientos}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-green-600 rounded-md flex items-center justify-center">
-                <i className="fas fa-truck text-white text-sm"></i>
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Traslados</p>
-              <p className="text-2xl font-bold text-gray-900">{estadisticas.totalTraslados}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-yellow-600 rounded-md flex items-center justify-center">
-                <i className="fas fa-tools text-white text-sm"></i>
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Mantenimientos</p>
-              <p className="text-2xl font-bold text-gray-900">{estadisticas.totalMantenimientos}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-red-600 rounded-md flex items-center justify-center">
-                <i className="fas fa-wrench text-white text-sm"></i>
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Reparaciones</p>
-              <p className="text-2xl font-bold text-gray-900">{estadisticas.totalReparaciones}</p>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          title="Total Movimientos"
+          value={estadisticas.totalMovimientos}
+          icon="fa-exchange-alt"
+          iconBgColor="bg-blue-600"
+        />
+        <StatCard
+          title="Traslados"
+          value={estadisticas.totalTraslados}
+          icon="fa-truck"
+          iconBgColor="bg-green-600"
+        />
+        <StatCard
+          title="Mantenimientos"
+          value={estadisticas.totalMantenimientos}
+          icon="fa-tools"
+          iconBgColor="bg-yellow-600"
+        />
+        <StatCard
+          title="Reparaciones"
+          value={estadisticas.totalReparaciones}
+          icon="fa-wrench"
+          iconBgColor="bg-red-600"
+        />
       </div>
 
       {/* Información de ubicación y usuario */}
@@ -470,70 +364,25 @@ export default function EquipoDashboard({ noSerie, onVolver }: EquipoDashboardPr
       {/* Gráficos de análisis */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Gráfico de movimientos por tipo */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Movimientos por Tipo</h3>
-          <div className="h-64">
-            {getMovimientosPorTipoData() ? (
-              <Bar 
-                data={getMovimientosPorTipoData()!} 
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      display: false
-                    }
-                  },
-                  scales: {
-                    y: {
-                      beginAtZero: true,
-                      ticks: {
-                        stepSize: 1
-                      }
-                    }
-                  }
-                }} 
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-500">
-                Sin datos de movimientos
-              </div>
-            )}
-          </div>
-        </div>
+        {data?.estadisticas && (
+          <MovimientosPorTipoChart
+            totalTraslados={estadisticas.totalTraslados}
+            totalMantenimientos={estadisticas.totalMantenimientos}
+            totalReparaciones={estadisticas.totalReparaciones}
+          />
+        )}
 
         {/* Gráfico de actividad mensual */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Actividad Mensual (Últimos 6 meses)</h3>
-          <div className="h-64">
-            {getActividadMensualData() ? (
-              <Line 
-                data={getActividadMensualData()!} 
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      display: false
-                    }
-                  },
-                  scales: {
-                    y: {
-                      beginAtZero: true,
-                      ticks: {
-                        stepSize: 1
-                      }
-                    }
-                  }
-                }} 
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-500">
-                Sin actividad reciente
-              </div>
-            )}
+        {Object.keys(getActividadMensualData()).length > 0 ? (
+          <ActividadMensualChart movimientosPorMes={getActividadMensualData()} />
+        ) : (
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Actividad Mensual (Últimos 6 meses)</h3>
+            <div className="h-64 flex items-center justify-center text-gray-500">
+              Sin actividad reciente
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Historial de movimientos */}
