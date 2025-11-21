@@ -38,9 +38,6 @@ interface AppState {
   equipos: VistaEquipoCompleto[];
   movimientos: VistaMovimientoDetallado[];
   catalogos: any;
-  
-  // Configuración de API
-  apiMode: string;
 }
 
 type AppAction =
@@ -52,8 +49,7 @@ type AppAction =
   | { type: 'SET_DASHBOARD_STATS'; payload: DashboardStats }
   | { type: 'SET_EQUIPOS'; payload: VistaEquipoCompleto[] }
   | { type: 'SET_MOVIMIENTOS'; payload: VistaMovimientoDetallado[] }
-  | { type: 'SET_CATALOGOS'; payload: any }
-  | { type: 'SET_API_MODE'; payload: string };
+  | { type: 'SET_CATALOGOS'; payload: any };
 
 // ========================
 // ESTADO INICIAL
@@ -68,8 +64,7 @@ const initialState: AppState = {
   dashboardStats: null,
   equipos: [],
   movimientos: [],
-  catalogos: null,
-  apiMode: 'nextjs'
+  catalogos: null
 };
 
 // ========================
@@ -113,9 +108,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'SET_CATALOGOS':
       return { ...state, catalogos: action.payload };
     
-    case 'SET_API_MODE':
-      return { ...state, apiMode: action.payload };
-    
     default:
       return state;
   }
@@ -129,7 +121,6 @@ const AppContext = createContext<{
   login: (correo: string, contraseña: string) => Promise<boolean>;
   logout: () => void;
   setSection: (section: string) => void;
-  setApiMode: (mode: string) => void;
   loadDashboardStats: () => Promise<void>;
   loadEquipos: (filters?: any) => Promise<void>;
   loadMovimientos: (filters?: any) => Promise<void>;
@@ -162,13 +153,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Sincronizar apiService cuando cambie el modo o token
+  // Sincronizar apiService cuando cambie el token
   useEffect(() => {
-    apiService.setMode(state.apiMode as 'nextjs' | 'python');
     if (state.token) {
       apiService.setToken(state.token);
     }
-  }, [state.apiMode, state.token]);
+  }, [state.token]);
 
   // ========================
   // FUNCIONES DE AUTENTICACIÓN
@@ -178,9 +168,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'SET_ERROR', payload: null });
 
     try {
-      // Configurar el modo de API antes de hacer la petición
-      apiService.setMode(state.apiMode as 'nextjs' | 'python');
-      
       const data: LoginResponse = await apiService.login(correo, contraseña);
 
       if (data.success && data.user && data.token) {
@@ -224,7 +211,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: 'SET_LOADING', payload: true });
       
       // Configurar API service
-      apiService.setMode(state.apiMode as 'nextjs' | 'python');
       apiService.setToken(state.token);
       
       const data = await apiService.getDashboardStats();
@@ -249,7 +235,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: 'SET_LOADING', payload: true });
       
       // Configurar API service
-      apiService.setMode(state.apiMode as 'nextjs' | 'python');
       apiService.setToken(state.token);
       
       const data = await apiService.getEquipos(filters);
@@ -274,7 +259,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: 'SET_LOADING', payload: true });
       
       // Configurar API service
-      apiService.setMode(state.apiMode as 'nextjs' | 'python');
       apiService.setToken(state.token);
       
       const data = await apiService.getMovimientos(filters);
@@ -297,7 +281,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     
     try {
       // Configurar API service
-      apiService.setMode(state.apiMode as 'nextjs' | 'python');
       apiService.setToken(state.token);
       
       const data = await apiService.getCatalogos();
@@ -319,10 +302,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'SET_SECTION', payload: section });
   };
 
-  const setApiMode = (mode: string) => {
-    dispatch({ type: 'SET_API_MODE', payload: mode });
-  };
-
   // Función de test para alta de equipos
   const testAltaEquipo = async (): Promise<boolean> => {
     if (!state.token) {
@@ -334,7 +313,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.log('🧪 Iniciando test de alta de equipo...');
       
       // Configurar API service
-      apiService.setMode(state.apiMode as 'nextjs' | 'python');
       apiService.setToken(state.token);
 
       const equipoTest = {
@@ -400,7 +378,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     login,
     logout,
     setSection,
-    setApiMode,
     loadDashboardStats,
     loadEquipos,
     loadMovimientos,
