@@ -113,7 +113,7 @@ export const getEquiposCompletos = async (filters?: {
   busqueda?: string;
 }): Promise<VistaEquipoCompleto[]> => {
   // Usar directamente la tabla equipo con una consulta simple
-  return getEquiposFromTable(filters);
+  return await getEquiposFromTable(filters);
 };
 
 // Función fallback para consultar tabla equipos directamente
@@ -134,12 +134,14 @@ const getEquiposFromTable = async (filters?: {
       e.idPosicion,
       te.nombreTipo as TipoEquipo,
       ee.estatus as EstatusEquipo,
-      'Centro Principal' as SucursalActual,
+      COALESCE(s.Sucursal, 'Centro Principal') as SucursalActual,
       u.NombreUsuario as UsuarioAsignado
     FROM equipo e
     LEFT JOIN tipoequipo te ON e.idTipoEquipo = te.idTipoEquipo
     LEFT JOIN estatusequipo ee ON e.idEstatus = ee.idEstatus
     LEFT JOIN usuarios u ON e.idUsuarios = u.idUsuarios
+    LEFT JOIN posicionequipo pe ON e.idPosicion = pe.idPosicion
+    LEFT JOIN sucursales s ON pe.idCentro = s.idCentro
   `;
   
   const params: (string | number | Date | null | undefined)[] = [];
@@ -157,6 +159,10 @@ const getEquiposFromTable = async (filters?: {
       conditions.push('ee.estatus = ?');
       params.push(filters.estatus);
     }
+    if (filters.sucursal) {
+      conditions.push('s.Sucursal = ?');
+      params.push(filters.sucursal);
+    }
     if (filters.usuario) {
       conditions.push('u.NombreUsuario LIKE ?');
       params.push(`%${filters.usuario}%`);
@@ -170,11 +176,12 @@ const getEquiposFromTable = async (filters?: {
         e.modelo LIKE ? OR
         te.nombreTipo LIKE ? OR
         ee.estatus LIKE ? OR
+        s.Sucursal LIKE ? OR
         u.NombreUsuario LIKE ?
       )`);
       // Repetir el término de búsqueda para cada campo
       const termino = `%${filters.busqueda}%`;
-      params.push(termino, termino, termino, termino, termino, termino, termino);
+      params.push(termino, termino, termino, termino, termino, termino, termino, termino);
     }
   }
 
@@ -302,6 +309,5 @@ export const getHistorialMovimientos = async (no_serie?: string) => {
   }
   return executeQuery('SELECT * FROM VistaHistorialMovimientos ORDER BY fecha DESC LIMIT 100');
 };
-
 
 export default pool;

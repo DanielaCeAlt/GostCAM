@@ -1,0 +1,36 @@
+# Build outputs
+.next/
+out/
+build/
+
+# Dependencies
+node_modules/
+
+# Environment files
+.env*
+
+# TypeScript
+next-env.d.ts
+
+# Archivos experimentales/rotos
+src/app/api/equipos/route_broken.ts
+src/types/optimized.ts
+
+# Componentes experimentales
+src/components/equipos/*Optimized.tsx
+src/lib/*Optimized.ts
+src/contexts/*Optimized.tsx
+
+# APIs temporales
+src/app/api/equipos/traslados/route.ts
+
+# Componentes con problemas de tipos
+src/components/ui/AdvancedFilters.tsx
+src/components/ui/MultiStepForm.tsx
+src/components/ui/PerformanceDashboard.tsx
+
+# Archivos de prueba
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx

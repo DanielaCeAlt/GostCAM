@@ -328,7 +328,7 @@ export function useMultiStepForm(steps: string[], initialStep = 0) {
     }
   }, [steps.length]);
 
-  const setStepData = useCallback((step: number, data: Record<string, any>) => {
+  const updateStepData = useCallback((step: number, data: Record<string, any>) => {
     setStepData(prev => ({
       ...prev,
       [step]: { ...prev[step], ...data }
@@ -350,7 +350,7 @@ export function useMultiStepForm(steps: string[], initialStep = 0) {
     nextStep,
     prevStep,
     goToStep,
-    setStepData,
+    setStepData: updateStepData,
     getAllData
   };
 }

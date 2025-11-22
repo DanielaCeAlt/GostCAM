@@ -267,47 +267,6 @@ export default function EquiposBusqueda({ onResultados }: EquiposBusquedaProps) 
           )}
         </div>
       </div>
-
-      {/* Resumen de resultados */}
-      {equipos.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900">
-              Resultados de Búsqueda ({paginacion.totalRegistros} encontrados)
-            </h3>
-          </div>
-
-          {/* Tabla compacta de resultados */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Serie</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Equipo</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Estatus</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Sucursal</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {equipos.map((equipo) => (
-                  <tr key={equipo.no_serie} className="hover:bg-gray-50">
-                    <td className="px-4 py-2 text-sm font-medium text-gray-900">{equipo.no_serie}</td>
-                    <td className="px-4 py-2 text-sm text-gray-900">{equipo.nombreEquipo}</td>
-                    <td className="px-4 py-2 text-sm text-gray-900">{equipo.TipoEquipo}</td>
-                    <td className="px-4 py-2">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(equipo.EstatusEquipo)}`}>
-                        {equipo.EstatusEquipo}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 text-sm text-gray-900">{equipo.SucursalActual}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

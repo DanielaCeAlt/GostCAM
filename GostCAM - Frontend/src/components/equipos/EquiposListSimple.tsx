@@ -12,6 +12,7 @@ interface EquiposListProps {
   onVerHistorial?: (noSerie: string) => void;
   onCambiarUbicacion?: (noSerie: string) => void;
   onMantenimiento?: (noSerie: string) => void;
+  refreshList?: number; // Para forzar recarga cuando cambia
 }
 
 const EquiposListSimple: React.FC<EquiposListProps> = React.memo(({ 
@@ -21,7 +22,8 @@ const EquiposListSimple: React.FC<EquiposListProps> = React.memo(({
   onEliminarEquipo,
   onVerHistorial,
   onCambiarUbicacion,
-  onMantenimiento
+  onMantenimiento,
+  refreshList
 }) => {
   const { getStatusColor } = useApp();
   const { equipos, loading, cargarEquipos } = useEquipos();
@@ -31,6 +33,14 @@ const EquiposListSimple: React.FC<EquiposListProps> = React.memo(({
   useEffect(() => {
     cargarEquipos();
   }, [cargarEquipos]);
+
+  // Recargar equipos cuando se solicite refrescar
+  useEffect(() => {
+    if (refreshList !== undefined && refreshList > 0) {
+      console.log('🔄 Recargando lista de equipos por refresh:', refreshList);
+      cargarEquipos();
+    }
+  }, [refreshList, cargarEquipos]);
 
   const handleSeleccionEquipo = useCallback((noSerie: string, seleccionado: boolean) => {
     setEquiposSeleccionados(prev => 

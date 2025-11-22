@@ -16,7 +16,7 @@ interface BaseFieldProps {
   fieldClassName?: string;
 }
 
-interface InputProps extends BaseFieldProps, Omit<React.InputHTMLAttributes<HTMLInputElement>, 'className'> {
+interface InputProps extends BaseFieldProps, Omit<React.InputHTMLAttributes<HTMLInputElement>, 'className' | 'size'> {
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   variant?: 'default' | 'filled' | 'outline';
@@ -25,7 +25,7 @@ interface InputProps extends BaseFieldProps, Omit<React.InputHTMLAttributes<HTML
   maxLength?: number;
 }
 
-interface TextAreaProps extends BaseFieldProps, Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'className'> {
+interface TextAreaProps extends BaseFieldProps, Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'className' | 'size'> {
   variant?: 'default' | 'filled' | 'outline';
   size?: 'sm' | 'md' | 'lg';
   autoResize?: boolean;
@@ -33,7 +33,7 @@ interface TextAreaProps extends BaseFieldProps, Omit<React.TextareaHTMLAttribute
   maxLength?: number;
 }
 
-interface SelectProps extends BaseFieldProps, Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'className'> {
+interface SelectProps extends BaseFieldProps, Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'className' | 'size'> {
   options: Array<{ value: string | number; label: string; disabled?: boolean }>;
   placeholder?: string;
   variant?: 'default' | 'filled' | 'outline';
@@ -122,7 +122,7 @@ export const FormInput = forwardRef<HTMLInputElement, InputProps>(({
             props.onBlur?.(e);
           }}
           maxLength={maxLength}
-          aria-invalid={hasError}
+          aria-invalid={hasError ? "true" : "false"}
           aria-describedby={
             hasError ? `${props.id}-error` : 
             helpText ? `${props.id}-help` : undefined
@@ -257,7 +257,7 @@ export const FormTextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(({
             props.onBlur?.(e);
           }}
           maxLength={maxLength}
-          aria-invalid={hasError}
+          aria-invalid={hasError ? "true" : "false"}
           aria-describedby={
             hasError ? `${props.id}-error` : 
             helpText ? `${props.id}-help` : undefined
@@ -372,7 +372,7 @@ export const FormSelect = forwardRef<HTMLSelectElement, SelectProps>(({
             setIsFocused(false);
             props.onBlur?.(e);
           }}
-          aria-invalid={hasError}
+          aria-invalid={hasError ? "true" : "false"}
           aria-describedby={
             hasError ? `${props.id}-error` : 
             helpText ? `${props.id}-help` : undefined
@@ -429,7 +429,7 @@ FormSelect.displayName = 'FormSelect';
 /**
  * Checkbox con mejor UX
  */
-interface CheckboxProps extends BaseFieldProps, Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'className'> {
+interface CheckboxProps extends BaseFieldProps, Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'className' | 'size'> {
   size?: 'sm' | 'md' | 'lg';
 }
 
@@ -468,7 +468,7 @@ export const FormCheckbox = forwardRef<HTMLInputElement, CheckboxProps>(({
           ref={ref}
           type="checkbox"
           className={checkboxClasses}
-          aria-invalid={hasError}
+          aria-invalid={hasError ? "true" : "false"}
           aria-describedby={
             hasError ? `${props.id}-error` : 
             helpText ? `${props.id}-help` : undefined

@@ -183,7 +183,7 @@ export function validateData<T>(schema: z.ZodSchema<T>, data: unknown): T {
     return schema.parse(data);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const firstError = error.errors[0];
+      const firstError = error.issues[0];
       throw new ValidationError(
         firstError.path.join('.'),
         firstError.message,
@@ -196,10 +196,11 @@ export function validateData<T>(schema: z.ZodSchema<T>, data: unknown): T {
 
 export function validatePartialData<T>(schema: z.ZodSchema<T>, data: unknown): Partial<T> {
   try {
-    return schema.partial().parse(data);
+    // Usar casting para acceder al método partial
+    return (schema as any).partial().parse(data);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const firstError = error.errors[0];
+      const firstError = error.issues[0];
       throw new ValidationError(
         firstError.path.join('.'),
         firstError.message,
@@ -219,7 +220,7 @@ export function useValidation<T>(schema: z.ZodSchema<T>) {
     } catch (error) {
       if (error instanceof z.ZodError) {
         const errors: Record<string, string> = {};
-        error.errors.forEach((err) => {
+        error.issues.forEach((err) => {
           const field = err.path.join('.');
           errors[field] = err.message;
         });
@@ -240,7 +241,7 @@ export function useValidation<T>(schema: z.ZodSchema<T>) {
       return 'Campo no encontrado';
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return error.errors[0]?.message || 'Error de validación';
+        return error.issues[0]?.message || 'Error de validación';
       }
       return 'Error de validación desconocido';
     }

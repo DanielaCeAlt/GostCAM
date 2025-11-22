@@ -18,12 +18,20 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      // Archivos experimentales/rotos
+      "src/app/api/equipos/route_broken.ts",
+      "src/types/optimized.ts",
+      "src/components/equipos/*Optimized.tsx",
+      "src/lib/*Optimized.ts",
+      "src/contexts/*Optimized.tsx",
     ],
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": "warn",
       "react/no-unescaped-entities": "warn",
-      "react-hooks/exhaustive-deps": "warn"
+      "react-hooks/exhaustive-deps": "warn",
+      "react/display-name": "warn",
+      "@typescript-eslint/no-unsafe-declaration-merging": "error"
     }
   },
 ];

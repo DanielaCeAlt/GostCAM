@@ -19,10 +19,16 @@ export default function Dashboard() {
   const { state, loadDashboardStats, testAltaEquipo } = useApp();
   const [vistaActual, setVistaActual] = useState<'resumen'>('resumen');
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [refreshing, setRefreshing] = useState(false); // Estado para botón de actualizar
 
   // Función separada para el botón de actualizar manual
   const handleRefresh = useCallback(async () => {
-    await loadDashboardStats();
+    setRefreshing(true);
+    try {
+      await loadDashboardStats();
+    } finally {
+      setRefreshing(false);
+    }
   }, [loadDashboardStats]);
 
   // Memoizar la función de carga inicial para evitar re-renders innecesarios
@@ -103,11 +109,11 @@ export default function Dashboard() {
 
   // Configuración para el gráfico de barras (equipos por tipo)
   const equiposPorTipoData = {
-    labels: stats.equiposPorTipo.map(item => item.tipo),
+    labels: stats.equiposPorTipo.map((item: { tipo: any; }) => item.tipo),
     datasets: [
       {
         label: 'Cantidad de Equipos',
-        data: stats.equiposPorTipo.map(item => item.cantidad),
+        data: stats.equiposPorTipo.map((item: { cantidad: any; }) => item.cantidad),
         backgroundColor: [
           'rgba(59, 130, 246, 0.8)',   // blue
           'rgba(16, 185, 129, 0.8)',   // green
@@ -139,11 +145,11 @@ export default function Dashboard() {
 
   // Configuración para el gráfico de dona (estatus)
   const estatusData = {
-    labels: stats.estatusPorcentajes.map(item => item.estatus),
+    labels: stats.estatusPorcentajes.map((item: { estatus: any; }) => item.estatus),
     datasets: [
       {
-        data: stats.estatusPorcentajes.map(item => item.porcentaje),
-        backgroundColor: stats.estatusPorcentajes.map(item => item.color),
+        data: stats.estatusPorcentajes.map((item: { porcentaje: any; }) => item.porcentaje),
+        backgroundColor: stats.estatusPorcentajes.map((item: { color: any; }) => item.color),
         borderWidth: 2,
         borderColor: '#bbbbbbff',
       },
@@ -184,10 +190,11 @@ export default function Dashboard() {
         <div className="flex space-x-2">
           <button
             onClick={handleRefresh}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+            disabled={refreshing}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
           >
-            <i className="fas fa-sync-alt mr-2"></i>
-            Actualizar
+            <i className={`fas fa-sync-alt ${refreshing ? 'animate-spin' : ''}`}></i>
+            <span>{refreshing ? 'Actualizando...' : 'Actualizar'}</span>
           </button>
         </div>
       }

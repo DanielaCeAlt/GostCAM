@@ -60,8 +60,8 @@ export function useEquipos() {
         setEquipos(equiposData);
         
         // Actualizar paginación si viene en la respuesta
-        if (response.pagination) {
-          setPaginacion(response.pagination);
+        if ((response as any).pagination) {
+          setPaginacion((response as any).pagination);
         }
       }
     } catch (error) {

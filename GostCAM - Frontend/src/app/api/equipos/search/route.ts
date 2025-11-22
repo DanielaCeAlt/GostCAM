@@ -28,19 +28,21 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 Búsqueda rápida:', q);
 
-    // Búsqueda simple en campos principales
+    // Consulta simplificada usando LIKE directo (sin CONCAT)
+    const searchPattern = `%${q.trim().replace(/[%_\\]/g, '\\$&')}%`;
+    
     const query = `
       SELECT 
         e.no_serie,
-        e.nombreEquipo,
-        e.modelo,
-        e.numeroActivo,
+        IFNULL(e.nombreEquipo, '') AS nombreEquipo,
+        IFNULL(e.modelo, '') AS modelo,
+        IFNULL(e.numeroActivo, '') AS numeroActivo,
         e.fechaAlta,
-        te.nombreTipo AS TipoEquipo,
-        ee.estatus AS EstatusEquipo,
+        IFNULL(te.nombreTipo, 'Sin Tipo') AS TipoEquipo,
+        IFNULL(ee.estatus, 'ACTIVO') AS EstatusEquipo,
         'Centro Principal' AS SucursalActual,
         'Área Principal' AS AreaActual,
-        u.NombreUsuario AS UsuarioAsignado
+        IFNULL(u.NombreUsuario, 'Sin Asignar') AS UsuarioAsignado
       FROM equipo e
       LEFT JOIN tipoequipo te ON e.idTipoEquipo = te.idTipoEquipo
       LEFT JOIN estatusequipo ee ON e.idEstatus = ee.idEstatus
@@ -56,10 +58,12 @@ export async function GET(request: NextRequest) {
       LIMIT ?
     `;
 
-    const searchTerm = `%${q.trim()}%`;
-    const equipos = await executeQuery<VistaEquipoCompleto>(query, [
-      searchTerm, searchTerm, searchTerm, searchTerm, limit
-    ]);
+    // Usar el patrón directamente en lugar de parámetros complejos
+    const params = [searchPattern, searchPattern, searchPattern, searchPattern, limit];
+    
+    console.log('Ejecutando consulta simplificada con patrón:', searchPattern);
+    
+    const equipos = await executeQuery<VistaEquipoCompleto>(query, params);
 
     console.log('✅ Equipos encontrados (búsqueda rápida):', equipos.length);
 

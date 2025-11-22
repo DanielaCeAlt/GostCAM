@@ -73,60 +73,79 @@ export async function GET(request: NextRequest) {
     const fechaHasta = searchParams.get('fechaHasta');
     const sucursal = searchParams.get('sucursal');
 
-    // Consulta base
-    let query = `
-      SELECT 
-        f.*,
-        e.nombreEquipo,
-        e.TipoEquipo as tipoEquipo,
-        e.SucursalActual as sucursal,
-        DATEDIFF(NOW(), f.fecha_reporte) as diasAbierta
-      FROM fallas_equipos f
-      INNER JOIN equipo e ON f.no_serie = e.no_serie
-      WHERE 1=1
-    `;
+    // Intentar consulta real primero
+    let fallas: FallaResult[] = [];
+    
+    try {
+      // Consulta base con JOIN mejorado
+      let query = `
+        SELECT 
+          f.*,
+          e.nombreEquipo,
+          te.nombreTipo as tipoEquipo,
+          COALESCE(s.Sucursal, 'Centro Principal') as sucursal,
+          DATEDIFF(NOW(), f.fecha_reporte) as diasAbierta
+        FROM fallas_equipos f
+        INNER JOIN equipo e ON f.no_serie = e.no_serie
+        LEFT JOIN tipoequipo te ON e.idTipoEquipo = te.idTipoEquipo
+        LEFT JOIN posicionequipo pe ON e.idPosicion = pe.idPosicion
+        LEFT JOIN sucursales s ON pe.idCentro = s.idCentro
+        WHERE 1=1
+      `;
 
-    const params: any[] = [];
+      const params: any[] = [];
 
-    // Aplicar filtros
-    if (estatus) {
-      query += ` AND f.estatus = ?`;
-      params.push(estatus);
+      // Aplicar filtros
+      if (estatus) {
+        query += ` AND f.estatus = ?`;
+        params.push(estatus);
+      }
+
+      if (prioridad) {
+        query += ` AND f.prioridad = ?`;
+        params.push(prioridad);
+      }
+
+      if (tipo) {
+        query += ` AND f.tipo_falla = ?`;
+        params.push(tipo);
+      }
+
+      if (tecnico) {
+        query += ` AND f.tecnico_asignado LIKE ?`;
+        params.push(`%${tecnico}%`);
+      }
+
+      if (fechaDesde) {
+        query += ` AND f.fecha_reporte >= ?`;
+        params.push(fechaDesde);
+      }
+
+      if (fechaHasta) {
+        query += ` AND f.fecha_reporte <= ?`;
+        params.push(fechaHasta);
+      }
+
+      if (sucursal) {
+        query += ` AND s.Sucursal LIKE ?`;
+        params.push(`%${sucursal}%`);
+      }
+
+      query += ` ORDER BY f.fecha_reporte DESC`;
+
+      fallas = await executeQuery(query, params) as FallaResult[];
+      
+    } catch (error) {
+      console.error('Error consultando fallas BD:', error);
+      
+      // Si la tabla no existe, devolver array vacío con mensaje claro
+      if (error instanceof Error && error.message.includes("doesn't exist")) {
+        console.log('⚠️ Tabla fallas_equipos no existe. Crear con script SQL proporcionado.');
+        fallas = [];
+      } else {
+        throw error; // Re-lanzar otros errores
+      }
     }
-
-    if (prioridad) {
-      query += ` AND f.prioridad = ?`;
-      params.push(prioridad);
-    }
-
-    if (tipo) {
-      query += ` AND f.tipo_falla = ?`;
-      params.push(tipo);
-    }
-
-    if (tecnico) {
-      query += ` AND f.tecnico_asignado LIKE ?`;
-      params.push(`%${tecnico}%`);
-    }
-
-    if (fechaDesde) {
-      query += ` AND f.fecha_reporte >= ?`;
-      params.push(fechaDesde);
-    }
-
-    if (fechaHasta) {
-      query += ` AND f.fecha_reporte <= ?`;
-      params.push(fechaHasta);
-    }
-
-    if (sucursal) {
-      query += ` AND e.SucursalActual LIKE ?`;
-      params.push(`%${sucursal}%`);
-    }
-
-    query += ` ORDER BY f.fecha_reporte DESC`;
-
-    const fallas = await executeQuery(query, params) as FallaResult[];
 
     // Generar estadísticas
     const estadisticas: EstadisticasFallas = {

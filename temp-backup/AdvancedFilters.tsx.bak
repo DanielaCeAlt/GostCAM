@@ -1,0 +1,551 @@
+'use client';
+
+import React, { useState } from 'react';
+import { cn } from '@/lib/utils';
+import { SearchFilter, FilterState, SavedFilter } from '@/hooks/useSearch';
+import MobileButton from './MobileButton';
+
+// Componentes básicos para evitar dependencias circulares
+const FormInput = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
+  ({ className, ...props }, ref) => (
+    <input
+      ref={ref}
+      className={cn("w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500", className)}
+      {...props}
+    />
+  )
+);
+FormInput.displayName = 'FormInput';
+
+const FormSelect = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
+  ({ className, children, ...props }, ref) => (
+    <select
+      ref={ref}
+      className={cn("w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500", className)}
+      {...props}
+    >
+      {children}
+    </select>
+  )
+);
+FormSelect.displayName = 'FormSelect';
+
+interface FormCheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'size'> {
+  label: string;
+  size?: 'sm' | 'md';
+}
+
+const FormCheckbox = React.forwardRef<HTMLInputElement, FormCheckboxProps>(
+  ({ className, label, size = 'md', ...props }, ref) => (
+    <label className={cn("inline-flex items-center", size === 'sm' ? 'text-sm' : 'text-base')}>
+      <input
+        ref={ref}
+        type="checkbox"
+        className={cn("mr-2 rounded focus:ring-2 focus:ring-blue-500", className)}
+        {...props}
+      />
+      <span>{label}</span>
+    </label>
+  )
+);
+FormCheckbox.displayName = 'FormCheckbox';
+
+interface AdvancedFiltersProps {
+  /** Configuración de filtros */
+  filters: SearchFilter[];
+  /** Estado actual de filtros */
+  values: FilterState;
+  /** Callback al cambiar filtro */
+  onChange: (filterId: string, value: any) => void;
+  /** Callback al limpiar filtros */
+  onClear: () => void;
+  /** Filtros guardados */
+  savedFilters?: SavedFilter[];
+  /** Callback al guardar filtro */
+  onSaveFilter?: (name: string) => void;
+  /** Callback al cargar filtro guardado */
+  onLoadFilter?: (filterId: string) => void;
+  /** Callback al eliminar filtro guardado */
+  onDeleteFilter?: (filterId: string) => void;
+  /** Facetas para mostrar conteos */
+  facets?: Record<string, Array<{ value: string; count: number }>>;
+  /** Mostrar solo filtros activos */
+  showOnlyActive?: boolean;
+  /** Filtros activos */
+  activeFilters?: string[];
+  /** Clase personalizada */
+  className?: string;
+}
+
+/**
+ * Componente avanzado de filtros con facetas y filtros guardados
+ */
+export default function AdvancedFilters({
+  filters,
+  values,
+  onChange,
+  onClear,
+  savedFilters = [],
+  onSaveFilter,
+  onLoadFilter,
+  onDeleteFilter,
+  facets = {},
+  showOnlyActive = false,
+  activeFilters = [],
+  className
+}: AdvancedFiltersProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [filterName, setFilterName] = useState('');
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['basic']));
+  const [showOnlyActiveState, setShowOnlyActive] = useState(showOnlyActive);
+
+  // Filtros a mostrar
+  const filtersToShow = showOnlyActiveState 
+    ? filters.filter(f => activeFilters.includes(f.id))
+    : filters;
+
+  const hasActiveFilters = activeFilters.length > 0;
+
+  // Agrupar filtros por tipo
+  const filterGroups = {
+    basic: filtersToShow.filter(f => f.type === 'text' || f.type === 'select'),
+    advanced: filtersToShow.filter(f => f.type === 'date' || f.type === 'range'),
+    options: filtersToShow.filter(f => f.type === 'boolean' || f.type === 'multiselect')
+  };
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(section)) {
+        newSet.delete(section);
+      } else {
+        newSet.add(section);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSaveFilter = () => {
+    if (filterName.trim() && onSaveFilter) {
+      onSaveFilter(filterName.trim());
+      setShowSaveDialog(false);
+      setFilterName('');
+    }
+  };
+
+  const renderFilter = (filter: SearchFilter) => {
+    const value = values[filter.id];
+    const facetData = facets[filter.id] || [];
+
+    const commonProps = {
+      id: filter.id,
+      label: filter.label,
+      value: value || '',
+      onChange: (e: any) => {
+        const newValue = e.target ? e.target.value : e;
+        onChange(filter.id, newValue);
+      }
+    };
+
+    switch (filter.type) {
+      case 'text':
+        return (
+          <FormInput
+            key={filter.id}
+            {...commonProps}
+            placeholder={filter.placeholder}
+            className="mb-4"
+          />
+        );
+
+      case 'select':
+        const selectOptions = filter.options || facetData.map(item => ({
+          value: item.value,
+          label: `${item.value} (${item.count})`
+        }));
+
+        return (
+          <FormSelect as any
+            key={filter.id}
+            {...commonProps}
+            placeholder={filter.placeholder || `Seleccionar ${filter.label.toLowerCase()}`}
+            options={selectOptions}
+            
+            className="mb-4"
+          />
+        );
+
+      case 'multiselect':
+        const multiselectOptions = filter.options || facetData.map(item => ({
+          value: item.value,
+          label: item.value,
+          count: item.count
+        }));
+
+        return (
+          <div key={filter.id} className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {filter.label}
+            </label>
+            <div className="space-y-2 max-h-40 overflow-y-auto border rounded-lg p-2">
+              {multiselectOptions.map(option => (
+                <div key={option.value} className="flex items-center justify-between">
+                  <FormCheckbox
+                    label={option.label}
+                    checked={Array.isArray(value) ? value.includes(option.value) : false}
+                    onChange={(e) => {
+                      const currentValue = Array.isArray(value) ? value : [];
+                      const newValue = e.target.checked
+                        ? [...currentValue, option.value]
+                        : currentValue.filter(v => v !== option.value);
+                      onChange(filter.id, newValue);
+                    }}
+                    
+                  />
+                  {option.count && <span className="text-gray-500 text-sm">({option.count})</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+
+      case 'boolean':
+        return (
+          <FormCheckbox
+            key={filter.id}
+            label={filter.label}
+            checked={Boolean(value)}
+            onChange={(e) => onChange(filter.id, e.target.checked)}
+            
+            className="mb-4"
+          />
+        );
+
+      case 'date':
+        return (
+          <FormInput
+            key={filter.id}
+            type="date"
+            label={filter.label}
+            value={value || ''}
+            onChange={(e) => onChange(filter.id, e.target.value)}
+            
+            className="mb-4"
+          />
+        );
+
+      case 'range':
+        const [min, max] = Array.isArray(value) ? value : [0, 100];
+        return (
+          <div key={filter.id} className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {filter.label}
+            </label>
+            <div className="flex space-x-2">
+              <FormInput
+                type="number"
+                placeholder="Mín"
+                value={min}
+                onChange={(e) => onChange(filter.id, [Number(e.target.value), max])}
+                
+                className="flex-1"
+              />
+              <FormInput
+                type="number"
+                placeholder="Máx"
+                value={max}
+                onChange={(e) => onChange(filter.id, [min, Number(e.target.value)])}
+                
+                className="flex-1"
+              />
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className={cn('bg-white border border-gray-200 rounded-lg', className)}>
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <div className="flex items-center space-x-2">
+          <h3 className="text-lg font-medium text-gray-900">Filtros</h3>
+          {hasActiveFilters && (
+            <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+              {activeFilters.length} activo{activeFilters.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center space-x-2">
+          {/* Toggle mostrar solo activos */}
+          {hasActiveFilters && (
+            <MobileButton
+              variant="ghost"
+              
+              onClick={() => setShowOnlyActive(!showOnlyActiveState)}
+              className="text-xs"
+            >
+              {showOnlyActiveState ? 'Mostrar todos' : 'Solo activos'}
+            </MobileButton>
+          )}
+
+          {/* Limpiar filtros */}
+          {hasActiveFilters && (
+            <MobileButton
+              variant="outline"
+              
+              onClick={onClear}
+              leftIcon={<i className="fas fa-times" />}
+            >
+              Limpiar
+            </MobileButton>
+          )}
+
+          {/* Toggle expandir */}
+          <MobileButton
+            variant="ghost"
+            
+            onClick={() => setIsExpanded(!isExpanded)}
+            rightIcon={
+              <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'}`} />
+            }
+          >
+            {isExpanded ? 'Contraer' : 'Expandir'}
+          </MobileButton>
+        </div>
+      </div>
+
+      {/* Contenido expandible */}
+      {isExpanded && (
+        <div className="p-4">
+          {/* Filtros guardados */}
+          {savedFilters.length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-sm font-medium text-gray-700 mb-3">Filtros Guardados</h4>
+              <div className="flex flex-wrap gap-2">
+                {savedFilters.map(savedFilter => (
+                  <div
+                    key={savedFilter.id}
+                    className="flex items-center bg-gray-50 rounded-lg px-3 py-2 text-sm"
+                  >
+                    <button
+                      onClick={() => onLoadFilter?.(savedFilter.id)}
+                      className="text-gray-700 hover:text-blue-600 font-medium mr-2"
+                    >
+                      {savedFilter.name}
+                    </button>
+                    
+                    {savedFilter.isDefault && (
+                      <span className="bg-blue-100 text-blue-700 text-xs px-1 py-0.5 rounded mr-2">
+                        Por defecto
+                      </span>
+                    )}
+
+                    <span className="text-gray-500 text-xs mr-2">
+                      {savedFilter.usageCount} usos
+                    </span>
+
+                    <button
+                      onClick={() => onDeleteFilter?.(savedFilter.id)}
+                      className="text-red-500 hover:text-red-700 ml-auto"
+                    >
+                      <i className="fas fa-trash text-xs" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Secciones de filtros */}
+          {filterGroups.basic.length > 0 && (
+            <div className="mb-6">
+              <button
+                onClick={() => toggleSection('basic')}
+                className="flex items-center justify-between w-full text-left text-sm font-medium text-gray-700 mb-3 hover:text-gray-900"
+              >
+                Filtros Básicos
+                <i className={`fas fa-chevron-${expandedSections.has('basic') ? 'up' : 'down'}`} />
+              </button>
+              
+              {expandedSections.has('basic') && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {filterGroups.basic.map(renderFilter)}
+                </div>
+              )}
+            </div>
+          )}
+
+          {filterGroups.advanced.length > 0 && (
+            <div className="mb-6">
+              <button
+                onClick={() => toggleSection('advanced')}
+                className="flex items-center justify-between w-full text-left text-sm font-medium text-gray-700 mb-3 hover:text-gray-900"
+              >
+                Filtros Avanzados
+                <i className={`fas fa-chevron-${expandedSections.has('advanced') ? 'up' : 'down'}`} />
+              </button>
+              
+              {expandedSections.has('advanced') && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {filterGroups.advanced.map(renderFilter)}
+                </div>
+              )}
+            </div>
+          )}
+
+          {filterGroups.options.length > 0 && (
+            <div className="mb-6">
+              <button
+                onClick={() => toggleSection('options')}
+                className="flex items-center justify-between w-full text-left text-sm font-medium text-gray-700 mb-3 hover:text-gray-900"
+              >
+                Opciones
+                <i className={`fas fa-chevron-${expandedSections.has('options') ? 'up' : 'down'}`} />
+              </button>
+              
+              {expandedSections.has('options') && (
+                <div className="space-y-4">
+                  {filterGroups.options.map(renderFilter)}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Guardar filtro */}
+          {hasActiveFilters && onSaveFilter && (
+            <div className="pt-4 border-t border-gray-200">
+              {!showSaveDialog ? (
+                <MobileButton
+                  variant="outline"
+                  
+                  onClick={() => setShowSaveDialog(true)}
+                  leftIcon={<i className="fas fa-save" />}
+                >
+                  Guardar Filtros
+                </MobileButton>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <FormInput
+                    value={filterName}
+                    onChange={(e) => setFilterName(e.target.value)}
+                    placeholder="Nombre del filtro..."
+                    
+                    className="flex-1"
+                  />
+                  <MobileButton
+                    
+                    onClick={handleSaveFilter}
+                    disabled={!filterName.trim()}
+                  >
+                    Guardar
+                  </MobileButton>
+                  <MobileButton
+                    variant="ghost"
+                    
+                    onClick={() => {
+                      setShowSaveDialog(false);
+                      setFilterName('');
+                    }}
+                  >
+                    Cancelar
+                  </MobileButton>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Resumen de filtros activos (cuando está contraído) */}
+      {!isExpanded && hasActiveFilters && (
+        <div className="px-4 pb-4">
+          <div className="flex flex-wrap gap-2">
+            {activeFilters.slice(0, 3).map(filterId => {
+              const filter = filters.find(f => f.id === filterId);
+              const value = values[filterId];
+              
+              if (!filter) return null;
+
+              return (
+                <div
+                  key={filterId}
+                  className="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full flex items-center space-x-1"
+                >
+                  <span>{filter.label}: {String(value).slice(0, 20)}</span>
+                  <button
+                    onClick={() => onChange(filterId, undefined)}
+                    className="hover:text-blue-900"
+                  >
+                    <i className="fas fa-times" />
+                  </button>
+                </div>
+              );
+            })}
+            
+            {activeFilters.length > 3 && (
+              <div className="text-gray-500 text-xs px-2 py-1">
+                +{activeFilters.length - 3} más
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Componente de chips de filtros activos
+ */
+interface FilterChipsProps {
+  filters: SearchFilter[];
+  values: FilterState;
+  onChange: (filterId: string, value: any) => void;
+  className?: string;
+}
+
+export function FilterChips({ 
+  filters, 
+  values, 
+  onChange, 
+  className 
+}: FilterChipsProps) {
+  const activeFilters = Object.entries(values).filter(([_, value]) => 
+    value !== undefined && value !== '' && value !== null &&
+    !(Array.isArray(value) && value.length === 0)
+  );
+
+  if (activeFilters.length === 0) return null;
+
+  return (
+    <div className={cn('flex flex-wrap gap-2', className)}>
+      {activeFilters.map(([filterId, value]) => {
+        const filter = filters.find(f => f.id === filterId);
+        if (!filter) return null;
+
+        return (
+          <div
+            key={filterId}
+            className="bg-blue-50 text-blue-700 text-sm px-3 py-1 rounded-full flex items-center space-x-2"
+          >
+            <span>
+              {filter.label}: {Array.isArray(value) ? value.join(', ') : String(value)}
+            </span>
+            <button
+              onClick={() => onChange(filterId, undefined)}
+              className="hover:text-blue-900 transition-colors"
+            >
+              <i className="fas fa-times text-xs" />
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}

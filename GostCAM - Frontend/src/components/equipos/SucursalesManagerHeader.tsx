@@ -14,6 +14,7 @@ interface SucursalesManagerHeaderProps {
   onVistaSucursalesChange: (vista: 'tarjetas' | 'lista') => void;
   onSearchChange: (term: string) => void;
   onRefresh: () => void;
+  loading?: boolean; // Nuevo prop para mostrar estado de carga
 }
 
 export default function SucursalesManagerHeader({ 
@@ -24,7 +25,8 @@ export default function SucursalesManagerHeader({
   onVistaChange,
   onVistaSucursalesChange,
   onSearchChange,
-  onRefresh 
+  onRefresh,
+  loading = false
 }: SucursalesManagerHeaderProps) {
   return (
     <div className="bg-white shadow rounded-lg p-6">
@@ -106,10 +108,11 @@ export default function SucursalesManagerHeader({
           {/* Botón de actualizar */}
           <button
             onClick={onRefresh}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            disabled={loading}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            <i className="fas fa-sync-alt"></i>
-            <span>Actualizar</span>
+            <i className={`fas fa-sync-alt ${loading ? 'animate-spin' : ''}`}></i>
+            <span>{loading ? 'Actualizando...' : 'Actualizar'}</span>
           </button>
         </div>
       </div>

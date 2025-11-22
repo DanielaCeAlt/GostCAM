@@ -4,13 +4,12 @@
 
 'use client';
 
-import React, { memo, useCallback, useMemo, useRef, useEffect } from 'react';
+import React, { memo, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useEquipos } from '@/hooks/useEquiposOptimized';
 import { useApp } from '@/contexts/AppContext';
 import { useLogger } from '@/lib/logger';
-// @ts-ignore
-// @ts-ignore - react-window types issue
-import { FixedSizeList as List } from 'react-window';
+// Importación temporal sin react-window
+// import { FixedSizeList as List } from 'react-window';
 
 interface EquiposListProps {
   onEquipoSelect?: (noSerie: string) => void;
@@ -118,7 +117,7 @@ const EquiposListOptimized: React.FC<EquiposListProps> = memo(({
   const { getStatusColor } = useApp();
   const logger = useLogger();
   const { equipos, loading, error, cargarEquipos, refrescarEquipos, isEmpty } = useEquipos();
-  const listRef = useRef<List>(null);
+  // const listRef = useRef<List>(null); // Temporal sin react-window
 
   // Memoizar callbacks para evitar re-renders
   const callbacks = useMemo(() => ({
@@ -154,9 +153,10 @@ const EquiposListOptimized: React.FC<EquiposListProps> = memo(({
 
   // Auto-scroll to top cuando cambia la lista
   useEffect(() => {
-    if (listRef.current) {
-      listRef.current.scrollToItem(0, 'start');
-    }
+    // Temporal sin react-window
+    // if (listRef.current) {
+    //   listRef.current.scrollToItem(0, 'start');
+    // }
   }, [equipos.length]);
 
   if (loading && equipos.length === 0) {
@@ -239,7 +239,16 @@ const EquiposListOptimized: React.FC<EquiposListProps> = memo(({
         </div>
       </div>
 
-      {/* Lista virtualizada */}
+      {/* Lista virtualizada - Temporalmente deshabilitada */}
+      <div className="p-4">
+        <p className="text-gray-600 text-center">
+          Componente optimizado temporalmente deshabilitado
+        </p>
+        <p className="text-sm text-gray-500 text-center mt-2">
+          Usar componente EquiposList estándar
+        </p>
+      </div>
+      {/* 
       <div style={{ height: '600px' }}>
         <List
           ref={listRef}
@@ -252,6 +261,7 @@ const EquiposListOptimized: React.FC<EquiposListProps> = memo(({
           {EquipoRow}
         </List>
       </div>
+      */}
     </div>
   );
 });

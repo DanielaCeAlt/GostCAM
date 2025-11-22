@@ -84,9 +84,9 @@ export default function LazyEquiposComponents({
         <span className="ml-2 text-gray-600">Cargando componente...</span>
       </div>
     }>
-      {component === 'list' && <EquiposList {...props} />}
-      {component === 'filters' && <EquiposFiltros {...props} />}
-      {component === 'alta' && <EquiposAlta {...props} />}
+      {component === 'list' && <EquiposList {...(props as any)} />}
+      {component === 'filters' && <EquiposFiltros {...(props as any)} />}
+      {component === 'alta' && <EquiposAlta {...(props as any)} />}
     </Suspense>
   );
 }

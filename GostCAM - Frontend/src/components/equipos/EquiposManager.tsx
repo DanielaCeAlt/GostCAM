@@ -31,6 +31,7 @@ interface ManagerState {
   equipoParaEditar: any | null;
   equipoParaCambioUbicacion: any | null;
   cargandoEquipo: boolean;
+  refreshing: boolean;
   resultadosBusqueda: any[];
   showDeleteModal: boolean;
   equipoAEliminar: { no_serie: string; nombreEquipo: string } | null;
@@ -44,6 +45,7 @@ const INITIAL_STATE: ManagerState = {
   equipoParaEditar: null,
   equipoParaCambioUbicacion: null,
   cargandoEquipo: false,
+  refreshing: false,
   resultadosBusqueda: [],
   showDeleteModal: false,
   equipoAEliminar: null,
@@ -65,6 +67,7 @@ export default function EquiposManager({ vistaInicial = 'lista' }: EquiposManage
     equipoParaEditar,
     equipoParaCambioUbicacion,
     cargandoEquipo,
+    refreshing,
     resultadosBusqueda,
     showDeleteModal,
     equipoAEliminar,
@@ -91,6 +94,10 @@ export default function EquiposManager({ vistaInicial = 'lista' }: EquiposManage
 
   const setCargandoEquipo = useCallback((loading: boolean) => {
     setState(prev => ({ ...prev, cargandoEquipo: loading }));
+  }, []);
+
+  const setRefreshing = useCallback((loading: boolean) => {
+    setState(prev => ({ ...prev, refreshing: loading }));
   }, []);
 
   const setResultadosBusqueda = useCallback((resultados: any[]) => {
@@ -292,6 +299,7 @@ export default function EquiposManager({ vistaInicial = 'lista' }: EquiposManage
             onVerHistorial={handleVerHistorial}
             onCambiarUbicacion={handleCambiarUbicacion}
             onMantenimiento={handleMantenimiento}
+            refreshList={refreshList}
           />
         );
 
@@ -463,13 +471,17 @@ export default function EquiposManager({ vistaInicial = 'lista' }: EquiposManage
             <EquiposEditar
               equipoData={equipoParaEditar}
               onSave={(equipoActualizado) => {
-                console.log('Equipo actualizado:', equipoActualizado);
+                console.log('✅ Equipo actualizado:', equipoActualizado);
                 setVistaActual('lista');
                 setEquipoParaEditar(null);
+                setEquipoSeleccionado('');
+                // Forzar recarga de la lista para reflejar los cambios
+                setRefreshList(prev => prev + 1);
               }}
               onCancel={() => {
                 setVistaActual('lista');
                 setEquipoParaEditar(null);
+                setEquipoSeleccionado('');
               }}
               isModal={false}
             />
@@ -491,10 +503,19 @@ export default function EquiposManager({ vistaInicial = 'lista' }: EquiposManage
       <EquiposManagerHeader
         title="Gestión de Equipos"
         onCreateNew={() => cambiarVista('alta')}
-        onRefresh={() => setRefreshList(prev => prev + 1)}
+        onRefresh={async () => {
+          setRefreshing(true);
+          try {
+            setRefreshList(prev => prev + 1);
+            // Esperamos un poco para mostrar la animación
+            await new Promise(resolve => setTimeout(resolve, 500));
+          } finally {
+            setRefreshing(false);
+          }
+        }}
         showCreateButton={vistaActual !== 'alta'}
         showRefreshButton={vistaActual === 'lista'}
-        loading={cargandoEquipo}
+        loading={refreshing}
         tabs={navigationTabs}
         activeTab={vistaActual}
         onTabChange={(tabId) => cambiarVista(tabId as VistaActual)}

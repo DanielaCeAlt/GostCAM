@@ -65,6 +65,28 @@ const EquiposEditar: React.FC<EquiposEditarProps> = ({
     cargarCatalogos();
   }, []);
 
+  // Inicializar valores del formulario cuando se cargan los catálogos
+  useEffect(() => {
+    if (tiposEquipo.length > 0 && estatusEquipo.length > 0 && usuarios.length > 0 && posiciones.length > 0) {
+      inicializarFormulario();
+    }
+  }, [tiposEquipo, estatusEquipo, usuarios, posiciones, equipoData]);
+
+  const inicializarFormulario = () => {
+    // Buscar IDs correspondientes en los catálogos
+    const tipoEncontrado = tiposEquipo.find(t => t.nombre === equipoData.TipoEquipo);
+    const estatusEncontrado = estatusEquipo.find(e => e.nombre === equipoData.EstatusEquipo);
+    const usuarioEncontrado = usuarios.find(u => u.nombre === equipoData.UsuarioAsignado);
+    
+    setFormData(prev => ({
+      ...prev,
+      idTipoEquipo: tipoEncontrado ? tipoEncontrado.id.toString() : '',
+      idEstatus: estatusEncontrado ? estatusEncontrado.id.toString() : '',
+      idUsuarios: usuarioEncontrado ? usuarioEncontrado.id.toString() : '',
+      // idPosicion se mantiene vacío si no hay match específico
+    }));
+  };
+
   const cargarCatalogos = async () => {
     setLoading(true);
     try {
@@ -72,15 +94,44 @@ const EquiposEditar: React.FC<EquiposEditarProps> = ({
       const data = await response.json();
       
       if (data.success) {
-        setTiposEquipo(data.data.tiposEquipo || []);
-        setEstatusEquipo(data.data.estatusEquipo || []);
-        setUsuarios(data.data.usuarios || []);
-        setPosiciones(data.data.posiciones || []);
+        // Mapear la estructura de la respuesta de los catálogos a la estructura esperada
+        const tiposEquipoMapped = (data.data.tiposEquipo || []).map((item: any) => ({
+          id: item.idTipoEquipo || item.id,
+          nombre: item.nombreTipo || item.nombre || item.TipoEquipo
+        }));
+        
+        const estatusEquipoMapped = (data.data.estatusEquipos || data.data.estatusEquipo || []).map((item: any) => ({
+          id: item.idEstatus || item.id,
+          nombre: item.estatus || item.nombre || item.EstatusEquipo
+        }));
+        
+        const usuariosMapped = (data.data.usuarios || []).map((item: any) => ({
+          id: item.idUsuarios || item.id,
+          nombre: item.NombreUsuario || item.nombre || item.UsuarioAsignado
+        }));
+        
+        const posicionesMapped = (data.data.posiciones || []).map((item: any) => ({
+          id: item.idPosicion || item.id,
+          nombre: item.NombrePosicion || item.nombre || item.posicion
+        }));
+
+        console.log('📋 Catálogos cargados:', {
+          tiposEquipo: tiposEquipoMapped,
+          estatusEquipo: estatusEquipoMapped, 
+          usuarios: usuariosMapped,
+          posiciones: posicionesMapped
+        });
+        
+        setTiposEquipo(tiposEquipoMapped);
+        setEstatusEquipo(estatusEquipoMapped);
+        setUsuarios(usuariosMapped);
+        setPosiciones(posicionesMapped);
       } else {
+        console.error('❌ Error cargando catálogos:', data.error);
         setError('Error cargando catálogos');
       }
     } catch (err) {
-      console.error('Error cargando catálogos:', err);
+      console.error('❌ Error de conexión cargando catálogos:', err);
       setError('Error de conexión');
     } finally {
       setLoading(false);
@@ -127,6 +178,9 @@ const EquiposEditar: React.FC<EquiposEditarProps> = ({
         ...(formData.idPosicion && formData.idPosicion !== '' && { idPosicion: formData.idPosicion })
       };
 
+      console.log('📤 Datos a enviar para actualizar:', dataToSend);
+      console.log('📍 URL de actualización:', `/api/equipos/${equipoData.no_serie}`);
+
       const response = await fetch(`/api/equipos/${equipoData.no_serie}`, {
         method: 'PUT',
         headers: {
@@ -135,13 +189,16 @@ const EquiposEditar: React.FC<EquiposEditarProps> = ({
         body: JSON.stringify(dataToSend)
       });
 
+      console.log('📥 Respuesta del servidor:', response.status);
       const result = await response.json();
+      console.log('📄 Resultado de la actualización:', result);
 
       if (result.success) {
         setSuccess('Equipo actualizado exitosamente');
         
         // Ejecutar callback si existe
         if (onSave && result.data) {
+          console.log('✅ Ejecutando callback onSave con:', result.data);
           onSave(result.data);
         }
 
@@ -152,10 +209,11 @@ const EquiposEditar: React.FC<EquiposEditarProps> = ({
           }, 1500);
         }
       } else {
+        console.error('❌ Error en la actualización:', result.error);
         setError(result.error || 'Error actualizando el equipo');
       }
     } catch (err) {
-      console.error('Error actualizando equipo:', err);
+      console.error('❌ Error de conexión actualizando equipo:', err);
       setError('Error de conexión. Intente nuevamente.');
     } finally {
       setSaving(false);
@@ -189,6 +247,27 @@ const EquiposEditar: React.FC<EquiposEditarProps> = ({
         <p className="text-gray-600">
           No. Serie: <span className="font-semibold">{equipoData.no_serie}</span>
         </p>
+        {process.env.NODE_ENV === 'development' && (
+          <details className="mt-2">
+            <summary className="text-xs text-gray-500 cursor-pointer">Debug Info</summary>
+            <pre className="text-xs bg-gray-100 p-2 mt-1 rounded overflow-auto">
+              {JSON.stringify({ 
+                equipoData: {
+                  TipoEquipo: equipoData.TipoEquipo,
+                  EstatusEquipo: equipoData.EstatusEquipo,
+                  UsuarioAsignado: equipoData.UsuarioAsignado
+                },
+                formData,
+                catalogsLoaded: {
+                  tiposEquipo: tiposEquipo.length,
+                  estatusEquipo: estatusEquipo.length,
+                  usuarios: usuarios.length,
+                  posiciones: posiciones.length
+                }
+              }, null, 2)}
+            </pre>
+          </details>
+        )}
       </div>
 
       {/* Mensajes de estado */}
