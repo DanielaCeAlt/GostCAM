@@ -16,25 +16,25 @@ export async function GET(request: NextRequest) {
       movimientos: await executeQuery('SELECT COUNT(*) as count FROM MovimientoInventario'),
       sucursales: await executeQuery('SELECT COUNT(*) as count FROM sucursales'),
       tiposEquipo: await executeQuery('SELECT COUNT(*) as count FROM tipoequipo'),
-      layouts: await executeQuery('SELECT COUNT(*) as count FROM layout'),
-      estatus: await executeQuery('SELECT COUNT(*) as count FROM estatus')
+      layouts: await executeQuery('SELECT COUNT(*) as count FROM posicionequipo'),
+      estatus: await executeQuery('SELECT COUNT(*) as count FROM estatusequipo')
     };
 
     // Equipos por estatus
     const equiposPorEstatus = await executeQuery(`
-      SELECT est.nombreEstatus, COUNT(*) as cantidad
+      SELECT est.estatus as nombreEstatus, COUNT(*) as cantidad
       FROM Equipo e
-      LEFT JOIN estatus est ON e.idEstatus = est.idEstatus
-      GROUP BY e.idEstatus, est.nombreEstatus
+      LEFT JOIN estatusequipo est ON e.idEstatus = est.idEstatus
+      GROUP BY e.idEstatus, est.estatus
       ORDER BY cantidad DESC
     `);
 
     // Equipos por tipo
     const equiposPorTipo = await executeQuery(`
-      SELECT t.tipoEquipo, COUNT(*) as cantidad
+      SELECT t.nombreTipo as tipoEquipo, COUNT(*) as cantidad
       FROM Equipo e
       LEFT JOIN tipoequipo t ON e.idTipoEquipo = t.idTipoEquipo
-      GROUP BY e.idTipoEquipo, t.tipoEquipo
+      GROUP BY e.idTipoEquipo, t.nombreTipo
       ORDER BY cantidad DESC
     `);
 
@@ -47,10 +47,12 @@ export async function GET(request: NextRequest) {
 
     // Último movimiento
     const ultimoMovimiento = await executeQuery(`
-      SELECT m.*, e.nombreEquipo, e.no_serie
+      SELECT m.idMovimientoInv, m.fecha, m.estatusMovimiento, m.idTipoMov,
+             e.nombreEquipo, e.no_serie
       FROM MovimientoInventario m
-      LEFT JOIN Equipo e ON m.no_serie = e.no_serie
-      ORDER BY m.fechaMovimiento DESC
+      LEFT JOIN detmovimiento dm ON dm.idMovimientoInv = m.idMovimientoInv
+      LEFT JOIN Equipo e ON dm.no_serie = e.no_serie
+      ORDER BY m.fecha DESC
       LIMIT 1
     `);
 

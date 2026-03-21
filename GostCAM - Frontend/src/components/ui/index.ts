@@ -7,6 +7,8 @@ export {
   SkeletonList, 
   SkeletonDashboard 
 } from './Skeleton';
+export { default as ScannableField } from './ScannableField';
+export { default as CameraScanner } from './CameraScanner';
 
 // You can add more UI components here as they are created
 // export { default as Button } from './Button';

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useCatalogos } from '@/hooks/useCatalogos';
 import MobileButton from '@/components/ui/MobileButton';
+import ScannableField from '@/components/ui/ScannableField';
 
 interface EquiposAltaProps {
   onSuccess?: () => void;
@@ -15,7 +16,7 @@ export default function EquiposAlta({
   onCancel, 
   enableAutoSave = false 
 }: EquiposAltaProps) {
-  const { tiposEquipo, sucursales, usuarios, estatusEquipo } = useCatalogos();
+  const { tiposEquipo, sucursales, usuarios, estatusEquipo, modelos } = useCatalogos();
   const [mensaje, setMensaje] = useState<{tipo: string; texto: string} | null>(null);
   
   const [formData, setFormData] = useState({
@@ -32,11 +33,21 @@ export default function EquiposAlta({
   });
 
   const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => {
+      const next = { ...prev, [field]: value };
+      // Al cambiar tipo de equipo, auto-seleccionar modelo si hay exactamente uno
+      if (field === 'idTipoEquipo') {
+        const filtrados = modelos.filter(m => m.idTipoEquipo === Number(value));
+        next.modelo = filtrados.length === 1 ? filtrados[0].nombre : '';
+      }
+      return next;
+    });
   };
+
+  // Modelos filtrados según el tipo de equipo seleccionado
+  const modelosFiltrados = formData.idTipoEquipo
+    ? modelos.filter(m => m.idTipoEquipo === Number(formData.idTipoEquipo))
+    : modelos;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +61,9 @@ export default function EquiposAlta({
         body: JSON.stringify(formData),
       });
 
-      if (response.ok) {
+      const data = await response.json();
+
+      if (response.ok && data.success) {
         setMensaje({
           tipo: 'success',
           texto: 'Equipo creado exitosamente'
@@ -59,13 +72,13 @@ export default function EquiposAlta({
       } else {
         setMensaje({
           tipo: 'error',
-          texto: 'Error al crear el equipo'
+          texto: data.error || 'Error al crear el equipo'
         });
       }
     } catch (error) {
       setMensaje({
         tipo: 'error',
-        texto: 'Error al crear el equipo'
+        texto: 'Error de conexión al servidor'
       });
     }
   };
@@ -88,18 +101,16 @@ export default function EquiposAlta({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Número de Serie *
-              </label>
-              <input
-                type="text"
-                value={formData.no_serie}
-                onChange={(e) => handleChange('no_serie', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
+            <ScannableField
+              label="Número de Serie"
+              name="no_serie"
+              value={formData.no_serie}
+              onChange={(v) => handleChange('no_serie', v)}
+              required
+              placeholder="Ej. SN-123456"
+              scannerPlaceholder="Centra el código de barras o QR del equipo"
+              hint="Puedes escribirlo o escanearlo con la cámara"
+            />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -107,10 +118,12 @@ export default function EquiposAlta({
               </label>
               <input
                 type="text"
+                name="nombreEquipo"
                 value={formData.nombreEquipo}
                 onChange={(e) => handleChange('nombreEquipo', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
+                placeholder="Ej. Laptop Dell Inspiron"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
@@ -118,26 +131,33 @@ export default function EquiposAlta({
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Modelo *
               </label>
-              <input
-                type="text"
+              <select
                 value={formData.modelo}
                 onChange={(e) => handleChange('modelo', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
-              />
+              >
+                <option value="">
+                  {formData.idTipoEquipo && modelosFiltrados.length === 0
+                    ? 'Sin modelos para este tipo'
+                    : 'Seleccionar modelo...'}
+                </option>
+                {modelosFiltrados.map(m => (
+                  <option key={m.idModelo} value={m.nombre}>
+                    {m.marca ? `${m.marca} - ${m.nombre}` : m.nombre}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Número de Activo
-              </label>
-              <input
-                type="text"
-                value={formData.numeroActivo}
-                onChange={(e) => handleChange('numeroActivo', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            <ScannableField
+              label="Número de Activo"
+              name="numeroActivo"
+              value={formData.numeroActivo}
+              onChange={(v) => handleChange('numeroActivo', v)}
+              placeholder=""
+              scannerPlaceholder="Centra el código de barras o QR del activo"
+            />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

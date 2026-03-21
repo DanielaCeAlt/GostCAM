@@ -1,34 +1,229 @@
-// Stub temporal para useEquiposOptimized
+// =============================================
+// HOOK OPTIMIZADO PARA EQUIPOS
+// =============================================
+
 'use client';
-import { useState, useEffect } from 'react';
 
-export function useEquipos() {
-  const [equipos, setEquipos] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [isEmpty, setIsEmpty] = useState(false);
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { useLogger } from '@/lib/logger';
+import { apiService } from '@/lib/apiService';
+import { VistaEquipoCompleto, FiltrosEquipos } from '@/types/database';
 
-  const cargarEquipos = () => {
-    setLoading(true);
-    // Stub: no hace nada real
-    setTimeout(() => {
-      setLoading(false);
-      setIsEmpty(true);
-    }, 1000);
-  };
+interface UseEquiposState {
+  equipos: VistaEquipoCompleto[];
+  loading: boolean;
+  error: string | null;
+  total: number;
+  page: number;
+  hasMore: boolean;
+}
 
-  const refrescarEquipos = cargarEquipos;
+interface UseEquiposOptions {
+  autoLoad?: boolean;
+  pageSize?: number;
+  cacheTtl?: number;
+}
 
+export function useEquipos(options: UseEquiposOptions = {}) {
+  const {
+    autoLoad = true,
+    pageSize = 50,
+    cacheTtl = 60000 // 1 minuto
+  } = options;
+
+  const logger = useLogger();
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const [state, setState] = useState<UseEquiposState>({
+    equipos: [],
+    loading: false,
+    error: null,
+    total: 0,
+    page: 1,
+    hasMore: true
+  });
+
+  // Cleanup al desmontar
   useEffect(() => {
-    // cargarEquipos(); // Comentado para evitar llamadas innecesarias
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, []);
 
+  // Estado optimizado con useCallback
+  const updateState = useCallback((updates: Partial<UseEquiposState>) => {
+    setState(prev => ({ ...prev, ...updates }));
+  }, []);
+
+  // Cargar equipos con caching y abort signal
+  const cargarEquipos = useCallback(async (
+    filtros?: FiltrosEquipos,
+    reset = true
+  ) => {
+    // Cancelar request anterior si existe
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    abortControllerRef.current = new AbortController();
+    
+    try {
+      updateState({ 
+        loading: true, 
+        error: null,
+        ...(reset && { equipos: [], page: 1 })
+      });
+
+      const startTime = Date.now();
+      const response = await apiService.getEquipos(filtros);
+
+      if (response.success && response.data) {
+        const newEquipos = response.data;
+        
+        setState(prev => ({
+          ...prev,
+          equipos: reset ? newEquipos : [...prev.equipos, ...newEquipos],
+          total: newEquipos.length,
+          hasMore: newEquipos.length >= pageSize,
+          page: reset ? 1 : prev.page + 1,
+          loading: false
+        }));
+
+        const duration = Date.now() - startTime;
+        logger.performance('cargarEquipos', duration);
+        logger.info(`Loaded ${newEquipos.length} equipos`, { 
+          filtros, 
+          duration,
+          total: newEquipos.length 
+        });
+      } else {
+        const errorMsg = response.error || 'Error desconocido al cargar equipos';
+        updateState({ 
+          error: errorMsg, 
+          loading: false 
+        });
+        logger.error('Error cargando equipos', new Error(errorMsg));
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name !== 'AbortError') {
+        const errorMsg = 'Error de conexión al cargar equipos';
+        updateState({ 
+          error: errorMsg, 
+          loading: false 
+        });
+        logger.error('Error cargando equipos', error);
+      }
+    }
+  }, [updateState, logger, pageSize]);
+
+  // Refrescar equipos
+  const refrescarEquipos = useCallback(() => {
+    cargarEquipos(undefined, true);
+  }, [cargarEquipos]);
+
+  // Buscar equipos con debounce
+  const buscarEquipos = useCallback(
+    debounce(async (termino: string) => {
+      if (!termino.trim()) {
+        cargarEquipos();
+        return;
+      }
+
+      const filtros: FiltrosEquipos = {
+        busqueda: termino
+      };
+      
+      await cargarEquipos(filtros, true);
+      logger.userAction('buscar_equipos', undefined, { termino });
+    }, 300),
+    [cargarEquipos, logger]
+  );
+
+  // Cargar más equipos (paginación)
+  const cargarMasEquipos = useCallback(() => {
+    if (!state.loading && state.hasMore) {
+      cargarEquipos(undefined, false);
+    }
+  }, [state.loading, state.hasMore, cargarEquipos]);
+
+  // Auto-load inicial
+  useEffect(() => {
+    if (autoLoad) {
+      cargarEquipos();
+    }
+  }, [autoLoad, cargarEquipos]);
+
   return {
-    equipos,
+    ...state,
+    cargarEquipos,
+    refrescarEquipos,
+    buscarEquipos,
+    cargarMasEquipos,
+    // Utilidades
+    isEmpty: state.equipos.length === 0,
+    hasError: !!state.error
+  };
+}
+
+// Utility function para debounce
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}
+
+// Hook especializado para un equipo individual
+export function useEquipo(noSerie: string | null) {
+  const logger = useLogger();
+  const [equipo, setEquipo] = useState<VistaEquipoCompleto | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const cargarEquipo = useCallback(async () => {
+    if (!noSerie) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/equipos/${noSerie}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setEquipo(data.data.equipo);
+        logger.info('Equipo cargado', { noSerie });
+      } else {
+        setError(data.error);
+        logger.error('Error cargando equipo', new Error(data.error));
+      }
+    } catch (error) {
+      const errorMsg = 'Error de conexión';
+      setError(errorMsg);
+      logger.error('Error cargando equipo', error as Error);
+    } finally {
+      setLoading(false);
+    }
+  }, [noSerie, logger]);
+
+  useEffect(() => {
+    if (noSerie) {
+      cargarEquipo();
+    } else {
+      setEquipo(null);
+      setError(null);
+    }
+  }, [noSerie, cargarEquipo]);
+
+  return {
+    equipo,
     loading,
     error,
-    isEmpty,
-    cargarEquipos,
-    refrescarEquipos
+    refrescar: cargarEquipo
   };
 }

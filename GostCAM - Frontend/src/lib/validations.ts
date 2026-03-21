@@ -196,8 +196,7 @@ export function validateData<T>(schema: z.ZodSchema<T>, data: unknown): T {
 
 export function validatePartialData<T>(schema: z.ZodSchema<T>, data: unknown): Partial<T> {
   try {
-    // Usar casting para acceder al método partial
-    return (schema as any).partial().parse(data);
+    return schema.partial().parse(data);
   } catch (error) {
     if (error instanceof z.ZodError) {
       const firstError = error.issues[0];

@@ -1,6 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { executeQuery } from '@/lib/database';
 import { ApiResponse } from '@/types/database';
+
+// =============================================
+// /api/equipos/fallas â€” GET / POST / PUT
+// Tabla real: fallas_equipos
+// =============================================
 
 interface FallaData {
   id?: number;
@@ -65,91 +70,58 @@ interface EstadisticasFallas {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const estatus = searchParams.get('estatus') || 'ABIERTA';
+    const estatus = searchParams.get('estatus');
     const prioridad = searchParams.get('prioridad');
-    const tipo = searchParams.get('tipo');
-    const tecnico = searchParams.get('tecnico');
-    const fechaDesde = searchParams.get('fechaDesde');
-    const fechaHasta = searchParams.get('fechaHasta');
-    const sucursal = searchParams.get('sucursal');
+    const tipo_falla = searchParams.get('tipo_falla');
+    const tecnico = searchParams.get('tecnico_asignado');
 
-    // Intentar consulta real primero
-    let fallas: FallaResult[] = [];
-    
-    try {
-      // Consulta base con JOIN mejorado
-      let query = `
-        SELECT 
-          f.*,
-          e.nombreEquipo,
-          te.nombreTipo as tipoEquipo,
-          COALESCE(s.Sucursal, 'Centro Principal') as sucursal,
-          DATEDIFF(NOW(), f.fecha_reporte) as diasAbierta
-        FROM fallas_equipos f
-        INNER JOIN equipo e ON f.no_serie = e.no_serie
-        LEFT JOIN tipoequipo te ON e.idTipoEquipo = te.idTipoEquipo
-        LEFT JOIN posicionequipo pe ON e.idPosicion = pe.idPosicion
-        LEFT JOIN sucursales s ON pe.idCentro = s.idCentro
-        WHERE 1=1
-      `;
+    let query = `
+      SELECT
+        f.id,
+        f.no_serie,
+        f.tipo_falla,
+        f.descripcion_problema,
+        f.sintomas,
+        f.prioridad,
+        f.usuario_reporta,
+        f.fecha_reporte,
+        f.fecha_solucion,
+        f.tecnico_asignado,
+        f.solucion_aplicada,
+        f.estatus,
+        f.tiempo_solucion_horas,
+        f.observaciones,
+        f.ubicacion_falla,
+        f.impacto,
+        f.requiere_repuestos,
+        f.repuestos_utilizados,
+        f.costo_reparacion,
+        DATEDIFF(NOW(), f.fecha_reporte) AS diasAbierta,
+        e.nombreEquipo,
+        IFNULL(te.nombreTipo, 'Sin tipo') AS tipoEquipo,
+        IFNULL(s.Sucursal, 'Sin asignar') AS sucursal
+      FROM fallas_equipos f
+      INNER JOIN equipo e ON f.no_serie = e.no_serie
+      LEFT JOIN tipoequipo te ON e.idTipoEquipo = te.idTipoEquipo
+      LEFT JOIN posicionequipo p ON e.idPosicion = p.idPosicion
+      LEFT JOIN sucursales s ON p.idCentro = s.idCentro
+      WHERE 1=1
+    `;
+    const params: (string | number)[] = [];
 
-      const params: any[] = [];
+    if (estatus) { query += ` AND f.estatus = ?`; params.push(estatus); }
+    if (prioridad) { query += ` AND f.prioridad = ?`; params.push(prioridad); }
+    if (tipo_falla) { query += ` AND f.tipo_falla = ?`; params.push(tipo_falla); }
+    if (tecnico) { query += ` AND f.tecnico_asignado LIKE ?`; params.push(`%${tecnico}%`); }
 
-      // Aplicar filtros
-      if (estatus) {
-        query += ` AND f.estatus = ?`;
-        params.push(estatus);
-      }
+    query += ` ORDER BY f.fecha_reporte DESC`;
 
-      if (prioridad) {
-        query += ` AND f.prioridad = ?`;
-        params.push(prioridad);
-      }
+    const fallas = await executeQuery(query, params) as any[];
 
-      if (tipo) {
-        query += ` AND f.tipo_falla = ?`;
-        params.push(tipo);
-      }
-
-      if (tecnico) {
-        query += ` AND f.tecnico_asignado LIKE ?`;
-        params.push(`%${tecnico}%`);
-      }
-
-      if (fechaDesde) {
-        query += ` AND f.fecha_reporte >= ?`;
-        params.push(fechaDesde);
-      }
-
-      if (fechaHasta) {
-        query += ` AND f.fecha_reporte <= ?`;
-        params.push(fechaHasta);
-      }
-
-      if (sucursal) {
-        query += ` AND s.Sucursal LIKE ?`;
-        params.push(`%${sucursal}%`);
-      }
-
-      query += ` ORDER BY f.fecha_reporte DESC`;
-
-      fallas = await executeQuery(query, params) as FallaResult[];
-      
-    } catch (error) {
-      console.error('Error consultando fallas BD:', error);
-      
-      // Si la tabla no existe, devolver array vacío con mensaje claro
-      if (error instanceof Error && error.message.includes("doesn't exist")) {
-        console.log('⚠️ Tabla fallas_equipos no existe. Crear con script SQL proporcionado.');
-        fallas = [];
-      } else {
-        throw error; // Re-lanzar otros errores
-      }
-    }
-
-    // Generar estadísticas
-    const estadisticas: EstadisticasFallas = {
-      total: fallas.length,
+    // Calcular estadÃ­sticas
+    const total = fallas.length;
+    const estadisticas = {
+      total,
       abiertas: fallas.filter(f => f.estatus === 'ABIERTA').length,
       en_proceso: fallas.filter(f => f.estatus === 'EN_PROCESO').length,
       resueltas: fallas.filter(f => f.estatus === 'RESUELTA').length,
@@ -169,69 +141,36 @@ export async function GET(request: NextRequest) {
         alta: fallas.filter(f => f.prioridad === 'ALTA').length,
         critica: fallas.filter(f => f.prioridad === 'CRITICA').length,
       },
-      por_tecnico: []
+      por_tecnico: [] as any[]
     };
 
-    // Calcular promedio de horas de solución
-    const fallasResueltas = fallas.filter(f => f.estatus === 'RESUELTA' && f.tiempo_solucion_horas);
-    if (fallasResueltas.length > 0) {
-      const totalHoras = fallasResueltas.reduce((sum, f) => sum + (f.tiempo_solucion_horas || 0), 0);
-      estadisticas.promedio_solucion_horas = Math.round((totalHoras / fallasResueltas.length) * 100) / 100;
+    const resueltas = fallas.filter(f => f.estatus === 'RESUELTA' && f.tiempo_solucion_horas);
+    if (resueltas.length > 0) {
+      estadisticas.promedio_solucion_horas = Math.round(
+        resueltas.reduce((s: number, f: any) => s + Number(f.tiempo_solucion_horas), 0) / resueltas.length * 100
+      ) / 100;
     }
 
-    // Estadísticas por técnico
-    const tecnicosMap = new Map();
-    fallas.forEach(falla => {
-      if (falla.tecnico_asignado) {
-        if (!tecnicosMap.has(falla.tecnico_asignado)) {
-          tecnicosMap.set(falla.tecnico_asignado, {
-            tecnico: falla.tecnico_asignado,
-            total_asignadas: 0,
-            resueltas: 0,
-            en_proceso: 0,
-            total_horas: 0,
-            promedio_horas: 0
-          });
-        }
-        
-        const tecnico = tecnicosMap.get(falla.tecnico_asignado);
-        tecnico.total_asignadas++;
-        
-        if (falla.estatus === 'RESUELTA') {
-          tecnico.resueltas++;
-          if (falla.tiempo_solucion_horas) {
-            tecnico.total_horas += falla.tiempo_solucion_horas;
-          }
-        } else if (falla.estatus === 'EN_PROCESO') {
-          tecnico.en_proceso++;
-        }
-      }
+    const tecnicosMap = new Map<string, any>();
+    fallas.forEach(f => {
+      if (!f.tecnico_asignado) return;
+      const t = tecnicosMap.get(f.tecnico_asignado) ?? { tecnico: f.tecnico_asignado, total_asignadas: 0, resueltas: 0, en_proceso: 0, _horas: 0 };
+      t.total_asignadas++;
+      if (f.estatus === 'RESUELTA') { t.resueltas++; t._horas += Number(f.tiempo_solucion_horas || 0); }
+      if (f.estatus === 'EN_PROCESO') t.en_proceso++;
+      tecnicosMap.set(f.tecnico_asignado, t);
     });
+    estadisticas.por_tecnico = Array.from(tecnicosMap.values()).map(t => ({
+      tecnico: t.tecnico, total_asignadas: t.total_asignadas, resueltas: t.resueltas,
+      en_proceso: t.en_proceso,
+      promedio_horas: t.resueltas > 0 ? Math.round((t._horas / t.resueltas) * 100) / 100 : 0
+    }));
 
-    // Calcular promedios por técnico
-    tecnicosMap.forEach(tecnico => {
-      if (tecnico.resueltas > 0) {
-        tecnico.promedio_horas = Math.round((tecnico.total_horas / tecnico.resueltas) * 100) / 100;
-      }
-      delete tecnico.total_horas;
-    });
-
-    estadisticas.por_tecnico = Array.from(tecnicosMap.values());
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        fallas,
-        estadisticas
-      }
-    } as ApiResponse<any>);
+    return NextResponse.json({ success: true, data: { fallas, estadisticas } } as ApiResponse<any>);
 
   } catch (error) {
     console.error('Error consultando fallas:', error);
-    return NextResponse.json({
-      success: false,
-      error: 'Error interno del servidor'
-    } as ApiResponse<any>, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Error interno del servidor' } as ApiResponse<any>, { status: 500 });
   }
 }
 
@@ -243,7 +182,7 @@ export async function POST(request: NextRequest) {
       no_serie,
       tipo_falla,
       descripcion_problema,
-      sintomas,
+      sintomas = '',
       prioridad = 'NORMAL',
       usuario_reporta,
       tecnico_asignado,
@@ -251,114 +190,40 @@ export async function POST(request: NextRequest) {
       impacto = 'MEDIO',
       requiere_repuestos = false,
       observaciones = ''
-    } = body as FallaData;
+    } = body;
 
-    // Validaciones
-    if (!no_serie || !tipo_falla || !descripcion_problema || !usuario_reporta || !ubicacion_falla) {
-      return NextResponse.json({
-        success: false,
-        error: 'Campos requeridos: no_serie, tipo_falla, descripcion_problema, usuario_reporta, ubicacion_falla'
-      } as ApiResponse<any>, { status: 400 });
+    if (!no_serie || !tipo_falla || !descripcion_problema || !usuario_reporta) {
+      return NextResponse.json({ success: false, error: 'Faltan campos requeridos: no_serie, tipo_falla, descripcion_problema, usuario_reporta' } as ApiResponse<any>, { status: 400 });
     }
 
-    // Verificar que el equipo existe
-    const equipoQuery = `SELECT no_serie, nombreEquipo FROM equipo WHERE no_serie = ?`;
-    const equipoResult = await executeQuery(equipoQuery, [no_serie]);
-    
+    const equipoResult = await executeQuery(`SELECT no_serie FROM equipo WHERE no_serie = ?`, [no_serie]);
     if (equipoResult.length === 0) {
-      return NextResponse.json({
-        success: false,
-        error: 'Equipo no encontrado'
-      } as ApiResponse<any>, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Equipo no encontrado' } as ApiResponse<any>, { status: 404 });
     }
 
-    // Crear tabla si no existe
-    const createTableQuery = `
-      CREATE TABLE IF NOT EXISTS fallas_equipos (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        no_serie VARCHAR(50) NOT NULL,
-        tipo_falla ENUM('HARDWARE', 'SOFTWARE', 'CONECTIVIDAD', 'SUMINISTROS', 'MECANICA', 'ELECTRICA', 'OTRA') NOT NULL,
-        descripcion_problema TEXT NOT NULL,
-        sintomas TEXT,
-        prioridad ENUM('BAJA', 'NORMAL', 'ALTA', 'CRITICA') DEFAULT 'NORMAL',
-        usuario_reporta VARCHAR(100) NOT NULL,
-        fecha_reporte TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        fecha_solucion TIMESTAMP NULL,
-        tecnico_asignado VARCHAR(100),
-        solucion_aplicada TEXT,
-        estatus ENUM('ABIERTA', 'EN_PROCESO', 'RESUELTA', 'CANCELADA') DEFAULT 'ABIERTA',
-        tiempo_solucion_horas DECIMAL(8,2),
-        observaciones TEXT,
-        ubicacion_falla VARCHAR(200) NOT NULL,
-        impacto ENUM('BAJO', 'MEDIO', 'ALTO', 'CRITICO') DEFAULT 'MEDIO',
-        requiere_repuestos BOOLEAN DEFAULT FALSE,
-        repuestos_utilizados TEXT,
-        costo_reparacion DECIMAL(10,2),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_no_serie (no_serie),
-        INDEX idx_estatus (estatus),
-        INDEX idx_fecha_reporte (fecha_reporte),
-        INDEX idx_tecnico (tecnico_asignado),
-        FOREIGN KEY (no_serie) REFERENCES equipo(no_serie) ON UPDATE CASCADE
-      )
-    `;
-
-    await executeQuery(createTableQuery);
-
-    // Insertar nueva falla
-    const insertQuery = `
-      INSERT INTO fallas_equipos (
-        no_serie, tipo_falla, descripcion_problema, sintomas, prioridad,
-        usuario_reporta, tecnico_asignado, ubicacion_falla, impacto,
-        requiere_repuestos, observaciones
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-
-    const result = await executeQuery(insertQuery, [
-      no_serie,
-      tipo_falla,
-      descripcion_problema,
-      sintomas || '',
-      prioridad,
-      usuario_reporta,
-      tecnico_asignado || null,
-      ubicacion_falla,
-      impacto,
-      requiere_repuestos ? 1 : 0,
-      observaciones
+    const result = await executeQuery(`
+      INSERT INTO fallas_equipos
+        (no_serie, tipo_falla, descripcion_problema, sintomas, prioridad, usuario_reporta,
+         tecnico_asignado, ubicacion_falla, impacto, requiere_repuestos, observaciones)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      no_serie, tipo_falla, descripcion_problema, sintomas, prioridad, usuario_reporta,
+      tecnico_asignado || null, ubicacion_falla || '', impacto, requiere_repuestos ? 1 : 0, observaciones
     ]);
 
-    // Actualizar estado del equipo si es necesario
-    if (prioridad === 'CRITICA' || impacto === 'CRITICO') {
-      await executeQuery(
-        `UPDATE equipo SET EstatusEquipo = 'Fuera de Servicio' WHERE no_serie = ?`,
-        [no_serie]
-      );
-    } else {
-      await executeQuery(
-        `UPDATE equipo SET EstatusEquipo = 'Con Falla' WHERE no_serie = ?`,
-        [no_serie]
-      );
-    }
+    // Actualizar estatus del equipo segÃºn prioridad/impacto
+    const idEstatusNuevo = (prioridad === 'CRITICA' || impacto === 'CRITICO') ? 6 : 7;
+    await executeQuery(`UPDATE equipo SET idEstatus = ? WHERE no_serie = ?`, [idEstatusNuevo, no_serie]);
 
     return NextResponse.json({
       success: true,
       message: 'Falla registrada exitosamente',
-      data: {
-        fallaId: (result as any).insertId,
-        no_serie,
-        tipo_falla,
-        estatus: 'ABIERTA'
-      }
+      data: { fallaId: (result as any).insertId, no_serie, estatus: 'ABIERTA' }
     } as ApiResponse<any>);
 
   } catch (error) {
     console.error('Error creando falla:', error);
-    return NextResponse.json({
-      success: false,
-      error: 'Error interno del servidor'
-    } as ApiResponse<any>, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Error interno del servidor' } as ApiResponse<any>, { status: 500 });
   }
 }
 
@@ -366,112 +231,55 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const {
-      id,
-      estatus,
-      tecnico_asignado,
-      solucion_aplicada,
-      tiempo_solucion_horas,
-      repuestos_utilizados,
-      costo_reparacion,
-      observaciones
-    } = body;
+    const { id, estatus, tecnico_asignado, solucion_aplicada, tiempo_solucion_horas, repuestos_utilizados, costo_reparacion, observaciones } = body;
 
     if (!id) {
-      return NextResponse.json({
-        success: false,
-        error: 'ID de falla requerido'
-      } as ApiResponse<any>, { status: 400 });
+      return NextResponse.json({ success: false, error: 'ID de falla requerido' } as ApiResponse<any>, { status: 400 });
     }
 
-    let updateQuery = `UPDATE fallas_equipos SET updated_at = CURRENT_TIMESTAMP`;
+    const sets: string[] = [];
     const params: any[] = [];
 
-    if (estatus) {
-      updateQuery += `, estatus = ?`;
-      params.push(estatus);
-      
-      if (estatus === 'RESUELTA') {
-        updateQuery += `, fecha_solucion = CURRENT_TIMESTAMP`;
-      }
+    if (estatus !== undefined) {
+      sets.push('estatus = ?'); params.push(estatus);
+      if (estatus === 'RESUELTA') sets.push('fecha_solucion = NOW()');
     }
-
     if (tecnico_asignado !== undefined) {
-      updateQuery += `, tecnico_asignado = ?`;
-      params.push(tecnico_asignado);
-      
-      if (tecnico_asignado && estatus !== 'RESUELTA') {
-        updateQuery += `, estatus = 'EN_PROCESO'`;
-      }
+      sets.push('tecnico_asignado = ?'); params.push(tecnico_asignado);
+      if (tecnico_asignado && estatus !== 'RESUELTA') { sets.push('estatus = ?'); params.push('EN_PROCESO'); }
+    }
+    if (solucion_aplicada !== undefined) { sets.push('solucion_aplicada = ?'); params.push(solucion_aplicada); }
+    if (tiempo_solucion_horas !== undefined) { sets.push('tiempo_solucion_horas = ?'); params.push(tiempo_solucion_horas); }
+    if (repuestos_utilizados !== undefined) { sets.push('repuestos_utilizados = ?'); params.push(repuestos_utilizados); }
+    if (costo_reparacion !== undefined) { sets.push('costo_reparacion = ?'); params.push(costo_reparacion); }
+    if (observaciones !== undefined) { sets.push('observaciones = ?'); params.push(observaciones); }
+
+    if (sets.length === 0) {
+      return NextResponse.json({ success: false, error: 'No hay campos para actualizar' } as ApiResponse<any>, { status: 400 });
     }
 
-    if (solucion_aplicada !== undefined) {
-      updateQuery += `, solucion_aplicada = ?`;
-      params.push(solucion_aplicada);
-    }
-
-    if (tiempo_solucion_horas !== undefined) {
-      updateQuery += `, tiempo_solucion_horas = ?`;
-      params.push(tiempo_solucion_horas);
-    }
-
-    if (repuestos_utilizados !== undefined) {
-      updateQuery += `, repuestos_utilizados = ?`;
-      params.push(repuestos_utilizados);
-    }
-
-    if (costo_reparacion !== undefined) {
-      updateQuery += `, costo_reparacion = ?`;
-      params.push(costo_reparacion);
-    }
-
-    if (observaciones !== undefined) {
-      updateQuery += `, observaciones = ?`;
-      params.push(observaciones);
-    }
-
-    updateQuery += ` WHERE id = ?`;
     params.push(id);
+    await executeQuery(`UPDATE fallas_equipos SET ${sets.join(', ')} WHERE id = ?`, params);
 
-    await executeQuery(updateQuery, params);
-
-    // Si la falla se resolvió, actualizar estado del equipo
+    // Si se resuelve, restaurar estatus del equipo si no tiene otras fallas abiertas
     if (estatus === 'RESUELTA') {
-      // Buscar el número de serie de la falla
-      const fallaQuery = `SELECT no_serie FROM fallas_equipos WHERE id = ?`;
-      const fallaResult = await executeQuery(fallaQuery, [id]);
-      
-      if (fallaResult.length > 0) {
-        const no_serie = (fallaResult[0] as any).no_serie;
-        
-        // Verificar si hay otras fallas abiertas para este equipo
-        const otrasFallasQuery = `
-          SELECT COUNT(*) as count 
-          FROM fallas_equipos 
-          WHERE no_serie = ? AND estatus IN ('ABIERTA', 'EN_PROCESO') AND id != ?
-        `;
-        const otrasFallas = await executeQuery(otrasFallasQuery, [no_serie, id]);
-        
-        // Si no hay otras fallas, poner el equipo como activo
-        if ((otrasFallas[0] as any).count === 0) {
-          await executeQuery(
-            `UPDATE equipo SET EstatusEquipo = 'Activo' WHERE no_serie = ?`,
-            [no_serie]
-          );
+      const falla = await executeQuery(`SELECT no_serie FROM fallas_equipos WHERE id = ?`, [id]) as any[];
+      if (falla.length > 0) {
+        const no_serie = falla[0].no_serie;
+        const otrasFallas = await executeQuery(
+          `SELECT COUNT(*) as cnt FROM fallas_equipos WHERE no_serie = ? AND estatus IN ('ABIERTA','EN_PROCESO') AND id != ?`,
+          [no_serie, id]
+        ) as any[];
+        if ((otrasFallas[0]?.cnt ?? 0) === 0) {
+          await executeQuery(`UPDATE equipo SET idEstatus = 1 WHERE no_serie = ?`, [no_serie]);
         }
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      message: 'Falla actualizada exitosamente'
-    } as ApiResponse<any>);
+    return NextResponse.json({ success: true, message: 'Falla actualizada exitosamente' } as ApiResponse<any>);
 
   } catch (error) {
     console.error('Error actualizando falla:', error);
-    return NextResponse.json({
-      success: false,
-      error: 'Error interno del servidor'
-    } as ApiResponse<any>, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Error interno del servidor' } as ApiResponse<any>, { status: 500 });
   }
 }

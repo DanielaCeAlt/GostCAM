@@ -25,7 +25,7 @@ interface InputProps extends BaseFieldProps, Omit<React.InputHTMLAttributes<HTML
   maxLength?: number;
 }
 
-interface TextAreaProps extends BaseFieldProps, Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'className' | 'size'> {
+interface TextAreaProps extends BaseFieldProps, Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'className'> {
   variant?: 'default' | 'filled' | 'outline';
   size?: 'sm' | 'md' | 'lg';
   autoResize?: boolean;

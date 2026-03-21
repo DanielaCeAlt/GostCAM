@@ -2,34 +2,43 @@
 
 import React from 'react';
 import { AppProvider, useApp } from '@/contexts/AppContext';
+import { SidebarProvider, useSidebar } from '@/contexts/SidebarContext';
 import LoginScreen from '@/components/LoginScreen';
 import Navigation from '@/components/Navigation';
 import EquiposManager from '@/components/equipos/EquiposManager';
+import { ToastContainer, useToast } from '@/components/ui/ToastNotification';
 
-// Componente interno que usa el contexto
 function EquiposContent() {
   const { state } = useApp();
+  const { collapsed } = useSidebar();
+  const { toasts, removeToast } = useToast();
+  const contentMargin = collapsed ? 'md:ml-16' : 'md:ml-60';
 
-  // Si no está autenticado, mostrar login
   if (!state.isAuthenticated) {
     return <LoginScreen />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <EquiposManager />
+    <>
+      <div className="min-h-screen bg-gostcam-bg-primary flex">
+        <Navigation />
+        <div className={`flex-1 min-w-0 ${contentMargin} transition-all duration-300`}>
+          <main className="flex-1 p-4">
+            <EquiposManager />
+          </main>
+        </div>
       </div>
-    </div>
+      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
+    </>
   );
 }
 
-// Componente principal envuelto en AppProvider
 export default function EquiposPage() {
   return (
-    <AppProvider>
-      <EquiposContent />
+    <AppProvider initialSection="equipos">
+      <SidebarProvider>
+        <EquiposContent />
+      </SidebarProvider>
     </AppProvider>
   );
 }

@@ -3,60 +3,32 @@ import { executeQuery } from "@/lib/database";
 
 export async function GET() {
   try {
-    // Intentar obtener sucursales basándose en los datos reales de la tabla equipo
-    let sucursales: any[] = [];
-    
-    try {
-      // Obtener las posiciones distintas de los equipos existentes
-      const posicionesQuery = `
-        SELECT DISTINCT idPosicion, COUNT(*) as cantidad
-        FROM equipo 
-        WHERE idPosicion IS NOT NULL 
-        AND (eliminado IS NULL OR eliminado = 0)
-        GROUP BY idPosicion
-        ORDER BY idPosicion
-      `;
-      
-      const posicionesData = await executeQuery(posicionesQuery);
-      
-      if (posicionesData && posicionesData.length > 0) {
-        // Mapear las posiciones reales de la base de datos a nombres de sucursal
-        sucursales = posicionesData.map((p: any) => {
-          const posId = p.idPosicion;
-          let nombre = 'Sucursal General';
-          
-          // Mapear IDs de posición a nombres de sucursal lógicos
-          if (posId === 1) nombre = 'Centro Principal';
-          else if (posId === 2) nombre = 'Sucursal Norte';
-          else if (posId === 3) nombre = 'Sucursal Sur';
-          else if (posId === 4) nombre = 'Almacén Central';
-          else if (posId === 5) nombre = 'Sede Administrativa';
-          else nombre = `Posición ${posId}`;
-          
-          return { 
-            id: nombre, 
-            nombre: nombre,
-            posicionId: posId,
-            equiposAsignados: p.cantidad 
-          };
-        });
-        
-        console.log('Sucursales obtenidas de BD:', sucursales);
-      }
-    } catch (error) {
-      console.warn('No se pudieron obtener sucursales de equipos:', error);
-    }
+    // Consultar la tabla real de Sucursales
+    const rows: any[] = await executeQuery(`
+      SELECT s.idCentro, s.Sucursal, s.Direccion,
+             z.Zona, e.Estado, m.Municipio,
+             COUNT(DISTINCT pe.idPosicion) as posiciones,
+             COUNT(DISTINCT eq.no_serie) as equiposAsignados
+      FROM sucursales s
+      LEFT JOIN zonas z ON z.idZona = s.idZona
+      LEFT JOIN estados e ON e.idEstado = s.idEstado
+      LEFT JOIN municipios m ON m.idMunicipios = s.idMunicipios
+      LEFT JOIN posicionequipo pe ON pe.idCentro = s.idCentro
+      LEFT JOIN equipo eq ON eq.idPosicion = pe.idPosicion AND (eq.eliminado IS NULL OR eq.eliminado = 0)
+      GROUP BY s.idCentro, s.Sucursal, s.Direccion, z.Zona, e.Estado, m.Municipio
+      ORDER BY s.Sucursal
+    `);
 
-    // Si no hay sucursales de la BD, usar valores por defecto
-    if (sucursales.length === 0) {
-      sucursales = [
-        { id: 'Centro Principal', nombre: 'Centro Principal', posicionId: 1 },
-        { id: 'Sucursal Norte', nombre: 'Sucursal Norte', posicionId: 2 },
-        { id: 'Sucursal Sur', nombre: 'Sucursal Sur', posicionId: 3 },
-        { id: 'Almacén Central', nombre: 'Almacén Central', posicionId: 4 },
-        { id: 'General', nombre: 'General', posicionId: null }
-      ];
-    }
+    const sucursales = rows.map((r: any) => ({
+      id: r.idCentro,
+      nombre: r.Sucursal,
+      direccion: r.Direccion || '',
+      zona: r.Zona || '',
+      estado: r.Estado || '',
+      municipio: r.Municipio || '',
+      posiciones: Number(r.posiciones) || 0,
+      equiposAsignados: Number(r.equiposAsignados) || 0
+    }));
 
     return NextResponse.json({
       success: true,

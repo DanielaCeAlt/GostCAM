@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import FallasManagerHeader from './FallasManagerHeader';
 
 interface FallaData {
@@ -91,6 +91,28 @@ const EquiposFallas: React.FC = () => {
   const [busquedaTerm, setBusquedaTerm] = useState('');
   const [fallaSeleccionada, setFallaSeleccionada] = useState<FallaData | null>(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [loadingEquipos, setLoadingEquipos] = useState(false);
+  const [errorEquipos, setErrorEquipos] = useState('');
+
+  const buscarEquipos = useCallback(async (termino: string) => {
+    setLoadingEquipos(true);
+    setErrorEquipos('');
+    try {
+      const response = await fetch(`/api/equipos/search?q=${encodeURIComponent(termino)}&limit=50`);
+      const data = await response.json();
+      if (data.success) {
+        setEquiposBusqueda(data.data || []);
+      } else {
+        setErrorEquipos('No se pudieron cargar los equipos');
+      }
+    } catch (error) {
+      console.error('Error buscando equipos:', error);
+      setErrorEquipos('Error de conexión al cargar equipos');
+    } finally {
+      setLoadingEquipos(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (activeTab === 'consultar') {
@@ -98,197 +120,46 @@ const EquiposFallas: React.FC = () => {
     }
     if (activeTab === 'reportar') {
       cargarTecnicos();
+      buscarEquipos('');
     }
-  }, [activeTab, filtros]);
+  }, [activeTab, buscarEquipos]);
 
   const cargarFallas = async () => {
     setLoading(true);
     try {
-      console.log('🔄 Cargando fallas desde API...');
-      
-      // Construir parámetros de consulta
       const params = new URLSearchParams();
-      if (filtros.estatus && filtros.estatus !== '') params.append('estatus', filtros.estatus);
-      if (filtros.prioridad && filtros.prioridad !== '') params.append('prioridad', filtros.prioridad);
-      if (filtros.tipo && filtros.tipo !== '') params.append('tipo_falla', filtros.tipo);
-      if (filtros.tecnico && filtros.tecnico !== '') params.append('tecnico_asignado', filtros.tecnico);
-      
-      // Intentar cargar desde API real primero
+      if (filtros.estatus) params.append('estatus', filtros.estatus);
+      if (filtros.prioridad) params.append('prioridad', filtros.prioridad);
+      if (filtros.tipo) params.append('tipo_falla', filtros.tipo);
+      if (filtros.tecnico) params.append('tecnico_asignado', filtros.tecnico);
+
       const response = await fetch(`/api/equipos/fallas?${params.toString()}`);
       const data = await response.json();
-      
-      let fallasData: FallaData[] = [];
-      let estadisticasData = {
-        total: 0,
-        abiertas: 0,
-        en_proceso: 0,
-        resueltas: 0,
-        promedio_solucion_horas: 0,
-        por_tipo: { hardware: 0, software: 0, conectividad: 0, suministros: 0, mecanica: 0, electrica: 0, otra: 0 },
-        por_prioridad: { baja: 0, normal: 0, alta: 0, critica: 0 },
-        por_tecnico: [] as any[]
-      };
-      
+
       if (response.ok && data.success && data.data) {
-        console.log('✅ Fallas cargadas desde API:', data.data);
-        fallasData = data.data.fallas || [];
-        estadisticasData = data.data.estadisticas || estadisticasData;
+        setFallas(data.data.fallas || []);
+        setEstadisticas(data.data.estadisticas || null);
+      } else {
+        setFallas([]);
+        setEstadisticas(null);
       }
-      
-      // Si no hay datos del API o falla, usar datos mock CON VARIACIÓN
-      if (fallasData.length === 0) {
-        console.log('📦 Usando datos mock de respaldo con variación...');
-        
-        // Generar datos con variación para simular actualizaciones reales
-        const tiposProblemas = [
-          'Cámara no enfoca correctamente',
-          'Error en software de grabación', 
-          'Pérdida intermitente de conexión',
-          'Sensor no responde',
-          'Pantalla con líneas',
-          'Audio distorsionado',
-          'Sobrecalentamiento del equipo'
-        ];
-        
-        const sintomas = [
-          'Imagen borrosa, no responde a ajustes automáticos',
-          'Se reinicia automáticamente cada 30 minutos',
-          'Se desconecta aleatoriamente de la red',
-          'No detecta movimiento',
-          'Líneas horizontales en la imagen',
-          'Ruido constante en la grabación',
-          'Equipo se apaga por temperatura'
-        ];
-
-        const equipos = ['CAM001', 'CAM002', 'CAM003', 'SEN001', 'SEN002', 'SW001', 'DET001'];
-        const nombres = ['Cámara Principal', 'Cámara Entrada', 'Cámara Pasillo', 'Sensor Puerta', 'Sensor Ventana', 'Switch Red', 'Detector Humo'];
-        const usuarios = ['Juan Pérez', 'Ana Rodríguez', 'Luis Martinez', 'María González', 'Carlos López'];
-        const tecnicos = ['María González', 'Carlos López', 'Juan Pérez', 'Ana Rodríguez'];
-        
-        const tiposFalla: ('HARDWARE' | 'SOFTWARE' | 'CONECTIVIDAD' | 'SUMINISTROS' | 'MECANICA' | 'ELECTRICA' | 'OTRA')[] = ['HARDWARE', 'SOFTWARE', 'CONECTIVIDAD'];
-        const prioridades: ('BAJA' | 'NORMAL' | 'ALTA' | 'CRITICA')[] = ['BAJA', 'NORMAL', 'ALTA', 'CRITICA'];
-        const estatusList: ('ABIERTA' | 'EN_PROCESO' | 'RESUELTA' | 'CANCELADA')[] = ['ABIERTA', 'EN_PROCESO', 'RESUELTA'];
-        const impactos: ('BAJO' | 'MEDIO' | 'ALTO' | 'CRITICO')[] = ['BAJO', 'MEDIO', 'ALTO', 'CRITICO'];
-        
-        fallasData = Array.from({ length: Math.floor(Math.random() * 5) + 3 }, (_, i) => ({
-          id: i + 1,
-          no_serie: equipos[Math.floor(Math.random() * equipos.length)],
-          nombreEquipo: nombres[Math.floor(Math.random() * nombres.length)],
-          tipoEquipo: Math.random() > 0.7 ? 'Sensor' : 'Cámara',
-          sucursal: Math.random() > 0.5 ? 'Centro Principal' : 'Sucursal Norte',
-          tipo_falla: tiposFalla[Math.floor(Math.random() * tiposFalla.length)],
-          descripcion_problema: tiposProblemas[Math.floor(Math.random() * tiposProblemas.length)],
-          sintomas: sintomas[Math.floor(Math.random() * sintomas.length)],
-          prioridad: prioridades[Math.floor(Math.random() * prioridades.length)],
-          usuario_reporta: usuarios[Math.floor(Math.random() * usuarios.length)],
-          fecha_reporte: new Date(Date.now() - Math.floor(Math.random() * 7) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          fecha_solucion: Math.random() > 0.6 ? new Date(Date.now() - Math.floor(Math.random() * 2) * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : undefined,
-          tecnico_asignado: tecnicos[Math.floor(Math.random() * tecnicos.length)],
-          solucion_aplicada: Math.random() > 0.5 ? 'Solución aplicada exitosamente' : undefined,
-          estatus: estatusList[Math.floor(Math.random() * estatusList.length)],
-          tiempo_solucion_horas: Math.random() > 0.6 ? Math.floor(Math.random() * 8) + 1 : undefined,
-          observaciones: `Observación ${i + 1} - ${new Date().toLocaleTimeString()}`,
-          ubicacion_falla: 'Centro Principal - Área ' + String.fromCharCode(65 + Math.floor(Math.random() * 3)),
-          impacto: impactos[Math.floor(Math.random() * impactos.length)],
-          requiere_repuestos: Math.random() > 0.5,
-          repuestos_utilizados: Math.random() > 0.7 ? 'Repuesto utilizado' : undefined,
-          costo_reparacion: Math.random() > 0.7 ? Math.floor(Math.random() * 500) + 100 : undefined,
-          diasAbierta: Math.floor(Math.random() * 10) + 1
-        }));
-
-        // Calcular estadísticas dinámicas
-        estadisticasData = {
-          total: fallasData.length,
-          abiertas: fallasData.filter(f => f.estatus === 'ABIERTA').length,
-          en_proceso: fallasData.filter(f => f.estatus === 'EN_PROCESO').length,
-          resueltas: fallasData.filter(f => f.estatus === 'RESUELTA').length,
-          promedio_solucion_horas: Math.floor(Math.random() * 8) + 1,
-          por_tipo: {
-            hardware: fallasData.filter(f => f.tipo_falla === 'HARDWARE').length,
-            software: fallasData.filter(f => f.tipo_falla === 'SOFTWARE').length,
-            conectividad: fallasData.filter(f => f.tipo_falla === 'CONECTIVIDAD').length,
-            suministros: 0,
-            mecanica: 0,
-            electrica: 0,
-            otra: 0
-          },
-          por_prioridad: {
-            baja: fallasData.filter(f => f.prioridad === 'BAJA').length,
-            normal: fallasData.filter(f => f.prioridad === 'NORMAL').length,
-            alta: fallasData.filter(f => f.prioridad === 'ALTA').length,
-            critica: fallasData.filter(f => f.prioridad === 'CRITICA').length
-          },
-          por_tecnico: tecnicos.map(tecnico => ({
-            tecnico,
-            total_asignadas: fallasData.filter(f => f.tecnico_asignado === tecnico).length,
-            resueltas: fallasData.filter(f => f.tecnico_asignado === tecnico && f.estatus === 'RESUELTA').length,
-            en_proceso: fallasData.filter(f => f.tecnico_asignado === tecnico && f.estatus === 'EN_PROCESO').length,
-            promedio_horas: Math.floor(Math.random() * 6) + 1
-          }))
-        };
-      }
-
-      setFallas(fallasData);
-      setEstadisticas(estadisticasData);
-      
-      console.log('✅ Fallas cargadas exitosamente:', fallasData.length);
-      
     } catch (error) {
-      console.error('❌ Error cargando fallas:', error);
-      
-      // En caso de error, mostrar datos mínimos
+      console.error('Error cargando fallas:', error);
       setFallas([]);
-      setEstadisticas({
-        total: 0,
-        abiertas: 0,
-        en_proceso: 0,
-        resueltas: 0,
-        promedio_solucion_horas: 0,
-        por_tipo: {
-          hardware: 0,
-          software: 0,
-          conectividad: 0,
-          suministros: 0,
-          mecanica: 0,
-          electrica: 0,
-          otra: 0
-        },
-        por_prioridad: { baja: 0, normal: 0, alta: 0, critica: 0 },
-        por_tecnico: []
-      });
+      setEstadisticas(null);
     }
     setLoading(false);
   };
 
   const cargarTecnicos = async () => {
     try {
-      // Usar datos fijos por ahora
-      setTecnicos([
-        { id: 1, nombre: 'Juan Pérez - Técnico Senior' },
-        { id: 2, nombre: 'María González - Técnico' },
-        { id: 3, nombre: 'Carlos López - Técnico Junior' },
-        { id: 4, nombre: 'Ana Rodríguez - Especialista' }
-      ]);
-    } catch (error) {
-      console.error('Error cargando técnicos:', error);
-    }
-  };
-
-  const buscarEquipos = async (termino: string) => {
-    if (!termino.trim()) {
-      setEquiposBusqueda([]);
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/equipos/search?q=${encodeURIComponent(termino)}`);
+      const response = await fetch('/api/catalogos?tipo=tecnicos');
       const data = await response.json();
-      
-      if (data.success) {
-        setEquiposBusqueda(data.data);
+      if (data.success && data.data) {
+        setTecnicos(data.data.map((u: any) => ({ id: u.id, nombre: u.nombre })));
       }
     } catch (error) {
-      console.error('Error buscando equipos:', error);
+      console.error('Error cargando técnicos:', error);
     }
   };
 
@@ -300,7 +171,7 @@ const EquiposFallas: React.FC = () => {
       ubicacion_falla: `${equipo.SucursalActual} - ${equipo.AreaActual || 'Sin especificar'}`
     }));
     setBusquedaTerm(`${equipo.no_serie} - ${equipo.nombreEquipo}`);
-    setEquiposBusqueda([]);
+    setDropdownVisible(false);
   };
 
   const reportarFalla = async () => {
@@ -387,15 +258,21 @@ const EquiposFallas: React.FC = () => {
   };
 
   const actualizarFalla = async (updateData: any) => {
+    if (!fallaSeleccionada) return;
     try {
-      // Simulación de actualización exitosa
-      alert('Falla actualizada exitosamente');
-      setShowUpdateModal(false);
-      setFallaSeleccionada(null);
-      
-      // Recargar la lista de fallas
-      cargarFallas();
-      
+      const response = await fetch('/api/equipos/fallas', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: fallaSeleccionada.id, ...updateData })
+      });
+      const result = await response.json();
+      if (result.success) {
+        setShowUpdateModal(false);
+        setFallaSeleccionada(null);
+        cargarFallas();
+      } else {
+        alert(`Error: ${result.error}`);
+      }
     } catch (error) {
       console.error('Error actualizando falla:', error);
       alert('Error interno del servidor');
@@ -443,7 +320,7 @@ const EquiposFallas: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-1">
       {/* Header unificado */}
       <FallasManagerHeader
         title="Gestión de Fallas"
@@ -472,6 +349,7 @@ const EquiposFallas: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg 
                              bg-white text-gray-900 text-sm"
                   >
+                    <option value="">Todas</option>
                     <option value="ABIERTA">Abierta</option>
                     <option value="EN_PROCESO">En Proceso</option>
                     <option value="RESUELTA">Resuelta</option>
@@ -683,62 +561,80 @@ const EquiposFallas: React.FC = () => {
 
           {/* Tab Content: Reportar */}
           {activeTab === 'reportar' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 {/* Selección de Equipo */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium text-gray-900 ">
+                <div className="space-y-3">
+                  <h3 className="text-lg font-medium text-gray-900">
                     Seleccionar Equipo
                   </h3>
-                  
-                  {/* Búsqueda de equipos */}
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={busquedaTerm}
-                      onChange={(e) => {
-                        setBusquedaTerm(e.target.value);
-                        buscarEquipos(e.target.value);
-                      }}
-                      placeholder="Buscar equipos por número de serie o nombre..."
-                      className="w-full px-4 py-2 border border-gray-300  rounded-lg 
-                               bg-white  text-gray-900 "
-                    />
-                    
-                    {/* Resultados de búsqueda */}
-                    {equiposBusqueda.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {equiposBusqueda.map((equipo) => (
-                          <button
-                            key={equipo.no_serie}
-                            onClick={() => seleccionarEquipo(equipo)}
-                            className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 "
-                          >
-                            <div className="text-sm font-medium text-gray-900 ">
-                              {equipo.no_serie} - {equipo.nombreEquipo}
-                            </div>
-                            <div className="text-xs text-gray-700">
-                              {equipo.TipoEquipo} | {equipo.SucursalActual}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Equipo seleccionado */}
-                  {equipoSeleccionado && (
-                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Equipo Seleccionado
-                      </h4>
-                      <div className="text-sm font-medium text-gray-900 ">
-                        {equipoSeleccionado.no_serie} - {equipoSeleccionado.nombreEquipo}
+                  {/* Si ya hay equipo seleccionado */}
+                  {equipoSeleccionado ? (
+                    <div className="p-3 bg-green-50 border border-green-300 rounded-lg flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-semibold text-green-800">
+                          ✓ {equipoSeleccionado.no_serie} — {equipoSeleccionado.nombreEquipo}
+                        </div>
+                        <div className="text-xs text-green-600">
+                          {equipoSeleccionado.TipoEquipo} | {equipoSeleccionado.SucursalActual}
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-700">
-                        {equipoSeleccionado.TipoEquipo} | {equipoSeleccionado.SucursalActual}
-                      </div>
+                      <button
+                        onClick={() => { setEquipoSeleccionado(null); setBusquedaTerm(''); buscarEquipos(''); }}
+                        className="text-xs text-red-500 hover:text-red-700 underline ml-3"
+                      >
+                        Cambiar
+                      </button>
                     </div>
+                  ) : (
+                    <>
+                      {/* Campo de búsqueda */}
+                      <input
+                        type="text"
+                        value={busquedaTerm}
+                        onChange={(e) => {
+                          setBusquedaTerm(e.target.value);
+                          buscarEquipos(e.target.value);
+                        }}
+                        placeholder="Filtrar por nombre o número de serie..."
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      />
+
+                      {/* Lista siempre visible */}
+                      <div className="border border-gray-200 rounded-lg overflow-y-auto max-h-64 bg-white">
+                        {loadingEquipos ? (
+                          <div className="px-4 py-6 text-center text-sm text-gray-400">
+                            <i className="fas fa-spinner fa-spin mr-2"></i>
+                            Cargando equipos...
+                          </div>
+                        ) : errorEquipos ? (
+                          <div className="px-4 py-6 text-center">
+                            <p className="text-sm text-red-500 mb-2">{errorEquipos}</p>
+                            <button onClick={() => buscarEquipos('')} className="text-sm text-blue-600 underline">Reintentar</button>
+                          </div>
+                        ) : equiposBusqueda.length === 0 ? (
+                          <div className="px-4 py-6 text-center text-sm text-gray-400">
+                            No se encontraron equipos
+                          </div>
+                        ) : (
+                          equiposBusqueda.map((equipo) => (
+                            <button
+                              key={equipo.no_serie}
+                              onClick={() => seleccionarEquipo(equipo)}
+                              className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-gray-100 last:border-0 transition-colors"
+                            >
+                              <div className="text-sm font-medium text-gray-900">
+                                {equipo.no_serie} — {equipo.nombreEquipo}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {equipo.TipoEquipo} | {equipo.SucursalActual}
+                              </div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
 
@@ -920,8 +816,8 @@ const EquiposFallas: React.FC = () => {
 
           {/* Tab Content: Estadísticas */}
           {activeTab === 'estadisticas' && estadisticas && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 p-6 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div>

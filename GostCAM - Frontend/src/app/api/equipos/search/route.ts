@@ -18,20 +18,9 @@ export async function GET(request: NextRequest) {
     const q = searchParams.get('q');
     const limit = parseInt(searchParams.get('limit') || '10');
 
-    if (!q || q.trim() === '') {
-      return NextResponse.json({
-        success: true,
-        data: [],
-        message: 'Término de búsqueda vacío'
-      } as ApiResponse<VistaEquipoCompleto[]>, { status: 200 });
-    }
+    console.log('🔍 Búsqueda rápida:', q || '(todos)');
 
-    console.log('🔍 Búsqueda rápida:', q);
-
-    // Consulta simplificada usando LIKE directo (sin CONCAT)
-    const searchPattern = `%${q.trim().replace(/[%_\\]/g, '\\$&')}%`;
-    
-    const query = `
+    const baseSelect = `
       SELECT 
         e.no_serie,
         IFNULL(e.nombreEquipo, '') AS nombreEquipo,
@@ -40,14 +29,33 @@ export async function GET(request: NextRequest) {
         e.fechaAlta,
         IFNULL(te.nombreTipo, 'Sin Tipo') AS TipoEquipo,
         IFNULL(ee.estatus, 'ACTIVO') AS EstatusEquipo,
-        'Centro Principal' AS SucursalActual,
-        'Área Principal' AS AreaActual,
+        IFNULL(s.Sucursal, 'Sin asignar') AS SucursalActual,
+        IFNULL(p.NombrePosicion, 'Sin asignar') AS AreaActual,
+        IFNULL(s.idCentro, '') AS idCentroActual,
         IFNULL(u.NombreUsuario, 'Sin Asignar') AS UsuarioAsignado
       FROM equipo e
       LEFT JOIN tipoequipo te ON e.idTipoEquipo = te.idTipoEquipo
       LEFT JOIN estatusequipo ee ON e.idEstatus = ee.idEstatus
       LEFT JOIN usuarios u ON e.idUsuarios = u.idUsuarios
+      LEFT JOIN posicionequipo p ON e.idPosicion = p.idPosicion
+      LEFT JOIN sucursales s ON p.idCentro = s.idCentro
       WHERE (e.eliminado = 0 OR e.eliminado IS NULL)
+    `;
+
+    let query: string;
+    let params: (string | number)[];
+
+    // Sanitize limit to safe integer (avoids mysql2 prepared-statement LIMIT issue)
+    const safeLimit = Math.max(1, Math.min(500, Math.floor(limit) || 50));
+
+    if (!q || q.trim() === '') {
+      // Sin término: devolver todos los equipos ordenados por nombre
+      query = baseSelect + ` ORDER BY e.nombreEquipo ASC LIMIT ${safeLimit}`;
+      params = [];
+    } else {
+      // Con término: filtrar por LIKE
+      const searchPattern = `%${q.trim().replace(/[%_\\]/g, '\\$&')}%`;
+      query = baseSelect + `
         AND (
           e.no_serie LIKE ? OR 
           e.nombreEquipo LIKE ? OR 
@@ -55,14 +63,10 @@ export async function GET(request: NextRequest) {
           e.numeroActivo LIKE ?
         )
       ORDER BY e.fechaAlta DESC
-      LIMIT ?
-    `;
+      LIMIT ${safeLimit}`;
+      params = [searchPattern, searchPattern, searchPattern, searchPattern];
+    }
 
-    // Usar el patrón directamente en lugar de parámetros complejos
-    const params = [searchPattern, searchPattern, searchPattern, searchPattern, limit];
-    
-    console.log('Ejecutando consulta simplificada con patrón:', searchPattern);
-    
     const equipos = await executeQuery<VistaEquipoCompleto>(query, params);
 
     console.log('✅ Equipos encontrados (búsqueda rápida):', equipos.length);

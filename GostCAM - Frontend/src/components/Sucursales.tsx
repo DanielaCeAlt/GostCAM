@@ -306,7 +306,7 @@ export default function Sucursales() {
 
   if (vistaActual === 'detalle' && sucursalSeleccionada) {
     return (
-      <div className="space-y-6">
+    <div className="space-y-2">
         {/* Header Unificado */}
         <SucursalesManagerHeader
           vistaActual={vistaActual}
@@ -338,7 +338,7 @@ export default function Sucursales() {
         </div>
 
         {/* Estadísticas de la Sucursal */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
@@ -389,7 +389,7 @@ export default function Sucursales() {
         </div>
 
         {/* Lista de Equipos - Separada por tipo */}
-        <div className="space-y-6">
+        <div className="space-y-2">
           {loadingEquipos ? (
             <div className="bg-white shadow rounded-lg">
               <div className="flex justify-center items-center p-8">
@@ -590,7 +590,7 @@ export default function Sucursales() {
     );
   }
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       {/* Header Unificado */}
       <SucursalesManagerHeader
         vistaActual={vistaActual}
@@ -605,7 +605,7 @@ export default function Sucursales() {
       />
 
       {/* Estadísticas Generales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
         <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-lg">
           <div className="flex items-center justify-between">
             <div>
@@ -672,7 +672,7 @@ export default function Sucursales() {
           </div>
         ) : vistaSucursales === 'tarjetas' ? (
           // Vista en Tarjetas
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
             {sucursalesFiltradas.map((sucursal) => {
               const porcentajeOperativo = Math.round(((sucursal.camarasActivas + sucursal.sensoresActivos) / sucursal.equiposTotal) * 100);
               

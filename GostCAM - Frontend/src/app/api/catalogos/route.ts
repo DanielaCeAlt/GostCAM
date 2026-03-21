@@ -26,18 +26,10 @@ export async function GET(request: NextRequest) {
     
     switch (tipo.toLowerCase()) {
       case 'tiposequipo':
-        // Obtener tipos de equipo con IDs numéricos
         data = await executeQuery(`
-          SELECT 
-            ROW_NUMBER() OVER (ORDER BY TipoEquipo) as idTipoEquipo,
-            TipoEquipo as nombre, 
-            TipoEquipo as descripcion 
-          FROM (
-            SELECT DISTINCT TipoEquipo 
-            FROM GostCAM.VistaEquiposCompletos 
-            WHERE TipoEquipo IS NOT NULL
-          ) tipos
-          ORDER BY TipoEquipo
+          SELECT idTipoEquipo, nombreTipo as nombre, descripcion
+          FROM GostCAM.TipoEquipo
+          ORDER BY nombreTipo
         `);
         break;
       
@@ -60,36 +52,42 @@ export async function GET(request: NextRequest) {
       case 'usuarios':
         // Obtener usuarios con IDs numéricos
         data = await executeQuery(`
-          SELECT 
-            ROW_NUMBER() OVER (ORDER BY UsuarioAsignado) as idUsuarios,
-            UsuarioAsignado as NombreUsuario,
-            1 as NivelUsuario,
-            '' as Correo 
-          FROM (
-            SELECT DISTINCT UsuarioAsignado 
-            FROM GostCAM.VistaEquiposCompletos 
-            WHERE UsuarioAsignado IS NOT NULL 
-              AND UsuarioAsignado != ''
-          ) usuarios
-          ORDER BY UsuarioAsignado
+          SELECT idUsuarios, NombreUsuario, NivelUsuario, Correo
+          FROM GostCAM.Usuarios
+          ORDER BY NombreUsuario
         `);
         break;
       
       case 'estatus':
         // Obtener estatus con IDs numéricos
         data = await executeQuery(`
-          SELECT 
-            ROW_NUMBER() OVER (ORDER BY EstatusEquipo) as idEstatus,
-            EstatusEquipo as nombre 
-          FROM (
-            SELECT DISTINCT EstatusEquipo 
-            FROM GostCAM.VistaEquiposCompletos 
-            WHERE EstatusEquipo IS NOT NULL
-          ) estatus
-          ORDER BY EstatusEquipo
+          SELECT idEstatus, estatus as nombre
+          FROM GostCAM.EstatusEquipo
+          ORDER BY estatus
         `);
         break;
       
+      case 'modelos':
+        data = await executeQuery(`
+          SELECT 
+            idModelo,
+            nombreModelo as nombre,
+            marca,
+            idTipoEquipo
+          FROM GostCAM.Modelo
+          ORDER BY nombreModelo
+        `);
+        break;
+
+      case 'tecnicos':
+        data = await executeQuery(`
+          SELECT idUsuarios as id, NombreUsuario as nombre
+          FROM GostCAM.Usuarios
+          WHERE NivelUsuario IN (1, 2, 3)
+          ORDER BY NombreUsuario
+        `);
+        break;
+
       default:
         return NextResponse.json({
           success: false,

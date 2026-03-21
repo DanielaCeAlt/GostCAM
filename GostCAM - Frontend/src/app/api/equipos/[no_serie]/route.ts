@@ -45,33 +45,78 @@ export async function GET(
 
     const equipo = equipoResult[0] as any;
 
+    // Obtener sucursal y área actual del equipo via posicion
+    const ubicacionQuery = `
+      SELECT p.NombrePosicion, p.TipoArea, s.Sucursal, s.idCentro,
+             z.Zona, est.Estado, m.Municipio
+      FROM equipo e
+      LEFT JOIN posicionequipo p ON e.idPosicion = p.idPosicion
+      LEFT JOIN sucursales s ON p.idCentro = s.idCentro
+      LEFT JOIN zonas z ON s.idZona = z.idZona
+      LEFT JOIN estados est ON s.idEstado = est.idEstado
+      LEFT JOIN municipios m ON s.idMunicipios = m.idMunicipios
+      WHERE e.no_serie = ?
+    `;
+    const ubicacionResult = await executeQuery(ubicacionQuery, [no_serie]);
+    const ubicacion = ubicacionResult[0] as any;
+
+    // Consultar historial real desde la vista
+    const historialResult = await executeQuery(`
+      SELECT fecha, NULL as fechaFin, tipoMovimiento,
+             Origen as sucursalOrigen, Destino as sucursalDestino,
+             estatusMovimiento, DiasDuracion
+      FROM vistahistorialmovimientos
+      WHERE no_serie = ?
+      ORDER BY fecha DESC
+      LIMIT 20
+    `, [no_serie]) as any[];
+
+    // Calcular estadísticas desde el historial
+    const totalTraslados = historialResult.filter((m: any) => m.tipoMovimiento === 'TRASLADO').length;
+    const totalMantenimientos = historialResult.filter((m: any) => m.tipoMovimiento === 'MANTENIMIENTO').length;
+    const totalReparaciones = historialResult.filter((m: any) => m.tipoMovimiento === 'REPARACIÓN').length;
+    const movimientosAbiertos = historialResult.filter((m: any) => m.estatusMovimiento === 'ABIERTO').length;
+    const promedio = historialResult.length > 0
+      ? Math.round(historialResult.reduce((sum: number, m: any) => sum + (m.DiasDuracion || 0), 0) / historialResult.length)
+      : 0;
+
     const response = {
       equipo: {
         ...equipo,
         fechaAlta: new Date(equipo.fechaAlta).toISOString(),
-        SucursalActual: 'Centro Principal',
-        AreaActual: 'Área Principal',
-        DescripcionArea: 'Sin descripción',
-        ZonaSucursal: 'CDMX',
-        EstadoSucursal: 'Ciudad de México',
-        MunicipioSucursal: 'Benito Juárez',
-        CorreoUsuario: 'usuario@correo.com'
+        SucursalActual: ubicacion?.Sucursal || 'Sin asignar',
+        AreaActual: ubicacion?.NombrePosicion || 'Sin asignar',
+        DescripcionArea: ubicacion?.TipoArea || '',
+        ZonaSucursal: ubicacion?.Zona || '',
+        EstadoSucursal: ubicacion?.Estado || '',
+        MunicipioSucursal: ubicacion?.Municipio || '',
+        CorreoUsuario: ''
       },
-      historial: [],
+      historial: historialResult.map((m: any) => ({
+        fecha: m.fecha instanceof Date ? m.fecha.toISOString() : String(m.fecha),
+        fechaFin: m.fechaFin ? (m.fechaFin instanceof Date ? m.fechaFin.toISOString() : String(m.fechaFin)) : null,
+        tipoMovimiento: m.tipoMovimiento,
+        estatusMovimiento: m.estatusMovimiento,
+        sucursalOrigen: m.sucursalOrigen,
+        sucursalDestino: m.sucursalDestino,
+        usuarioMovimiento: null
+      })),
       estadisticas: {
-        totalMovimientos: 0,
-        totalTraslados: 0,
-        totalMantenimientos: 0,
-        totalReparaciones: 0,
-        movimientosAbiertos: 0,
-        promedioDiasMovimiento: 0,
-        ultimoMovimiento: null
+        totalMovimientos: historialResult.length,
+        totalTraslados,
+        totalMantenimientos,
+        totalReparaciones,
+        movimientosAbiertos,
+        promedioDiasMovimiento: promedio,
+        ultimoMovimiento: historialResult[0]?.fecha
+          ? (historialResult[0].fecha instanceof Date ? historialResult[0].fecha.toISOString() : String(historialResult[0].fecha))
+          : null
       },
       equiposSimilares: [],
       metadatos: {
         consultadoEn: new Date().toISOString(),
         totalRegistros: {
-          movimientos: 0,
+          movimientos: historialResult.length,
           equiposSimilares: 0
         }
       }

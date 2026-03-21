@@ -19,16 +19,23 @@ export default function CameraScanner({ onResult, onClose, mode, placeholder = "
   const [error, setError] = useState<string | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scannerConfig, setScannerConfig] = useState<'standard' | 'enhanced'>('enhanced');
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment'); // trasera por defecto
   
   const webcamRef = useRef<Webcam>(null);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const qrReaderRef = useRef<HTMLDivElement>(null);
 
-  // Configuración de la webcam
+  // Configuración de la webcam (OCR)
   const videoConstraints = {
     width: 640,
     height: 480,
-    facingMode: { ideal: 'environment' } // Cámara trasera preferida
+    facingMode: { ideal: facingMode },
+  };
+
+  // Voltear cámara
+  const flipCamera = () => {
+    setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
+    setError(null);
   };
 
   // Solicitar permisos de cámara
@@ -53,6 +60,8 @@ export default function CameraScanner({ onResult, onClose, mode, placeholder = "
   useEffect(() => {
     if (currentMode === 'qr' && qrReaderRef.current && hasPermission) {
       // Configuración mejorada para códigos de barras
+      const videoConstraintsQR = { facingMode: { ideal: facingMode } };
+
       const enhancedConfig = {
         fps: 10,
         qrbox: { width: 300, height: 200 },
@@ -60,7 +69,8 @@ export default function CameraScanner({ onResult, onClose, mode, placeholder = "
         experimentalFeatures: {
           useBarCodeDetectorIfSupported: true
         },
-        rememberLastUsedCamera: true,
+        rememberLastUsedCamera: false,
+        videoConstraints: videoConstraintsQR,
         showTorchButtonIfSupported: true,
         showZoomSliderIfSupported: true,
         defaultZoomValueIfSupported: 1.5,
@@ -72,6 +82,8 @@ export default function CameraScanner({ onResult, onClose, mode, placeholder = "
       const standardConfig = {
         fps: 5,
         qrbox: { width: 250, height: 150 },
+        videoConstraints: videoConstraintsQR,
+        rememberLastUsedCamera: false,
         showTorchButtonIfSupported: true,
         showZoomSliderIfSupported: false,
         aspectRatio: 1.0,
@@ -107,7 +119,7 @@ export default function CameraScanner({ onResult, onClose, mode, placeholder = "
         scanner.clear().catch(console.error);
       };
     }
-  }, [currentMode, hasPermission, onResult, scannerConfig]);
+  }, [currentMode, hasPermission, onResult, scannerConfig, facingMode]);
 
   // Función para OCR
   const performOCR = useCallback(async () => {
@@ -212,6 +224,21 @@ export default function CameraScanner({ onResult, onClose, mode, placeholder = "
             {currentMode === 'qr' ? 'Escanear Código' : 'Reconocer Texto'}
           </h3>
           <div className="flex items-center space-x-2">
+            {/* Botón voltear cámara */}
+            <button
+              onClick={flipCamera}
+              title={facingMode === 'environment' ? 'Cambiar a cámara frontal' : 'Cambiar a cámara trasera'}
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            >
+              {/* Flip icon (inline SVG) */}
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5" aria-hidden="true">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                <circle cx="12" cy="13" r="4" />
+                <path d="M9 13h6M12 10v6" />
+              </svg>
+              <span>{facingMode === 'environment' ? 'Frontal' : 'Trasera'}</span>
+            </button>
+
             {currentMode === 'qr' && (
               <button
                 onClick={switchScannerConfig}

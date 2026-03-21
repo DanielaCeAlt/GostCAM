@@ -307,7 +307,7 @@ export function useForm({
 export function useMultiStepForm(steps: string[], initialStep = 0) {
   const [currentStep, setCurrentStep] = useState(initialStep);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
-  const [stepData, setStepData] = useState<Record<number, Record<string, any>>>({});
+  const [stepDataMap, setStepDataMap] = useState<Record<number, Record<string, any>>>({});
 
   const nextStep = useCallback(() => {
     if (currentStep < steps.length - 1) {
@@ -328,29 +328,29 @@ export function useMultiStepForm(steps: string[], initialStep = 0) {
     }
   }, [steps.length]);
 
-  const updateStepData = useCallback((step: number, data: Record<string, any>) => {
-    setStepData(prev => ({
+  const setStepData = useCallback((step: number, data: Record<string, any>) => {
+    setStepDataMap(prev => ({
       ...prev,
       [step]: { ...prev[step], ...data }
     }));
   }, []);
 
   const getAllData = useCallback(() => {
-    return Object.values(stepData).reduce((acc, data) => ({ ...acc, ...data }), {});
-  }, [stepData]);
+    return Object.values(stepDataMap).reduce((acc, data) => ({ ...acc, ...data }), {});
+  }, [stepDataMap]);
 
   return {
     currentStep,
     steps,
     completedSteps: Array.from(completedSteps),
-    stepData,
+    stepData: stepDataMap,
     isFirstStep: currentStep === 0,
     isLastStep: currentStep === steps.length - 1,
     progress: ((currentStep + 1) / steps.length) * 100,
     nextStep,
     prevStep,
     goToStep,
-    setStepData: updateStepData,
+    setStepData,
     getAllData
   };
 }

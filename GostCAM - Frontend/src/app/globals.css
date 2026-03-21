@@ -3,12 +3,12 @@
 
 /* Tema base usando variables CSS */
 html {
-  background-color: var(--gostcam-bg-primary, #f9fafb);
+  background-color: var(--gostcam-bg-primary, #c8ccd2);
 }
 
 body {
   box-sizing: border-box;
-  background-color: var(--gostcam-bg-primary, #f9fafb);
+  background-color: var(--gostcam-bg-primary, #c8ccd2);
   color: var(--gostcam-text-primary, #111827);
   transition: background-color 0.3s ease, color 0.3s ease;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;

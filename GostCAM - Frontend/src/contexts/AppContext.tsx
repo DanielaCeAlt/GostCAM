@@ -142,8 +142,8 @@ const AppContext = createContext<{
 // ========================
 // PROVIDER
 // ========================
-export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(appReducer, initialState);
+export function AppProvider({ children, initialSection = 'dashboard' }: { children: React.ReactNode; initialSection?: string }) {
+  const [state, dispatch] = useReducer(appReducer, { ...initialState, currentSection: initialSection });
 
   // Cargar token desde localStorage al inicializar
   useEffect(() => {

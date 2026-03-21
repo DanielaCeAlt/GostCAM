@@ -47,8 +47,8 @@ export default function Dashboard() {
     return (
       <GostCamLayout 
         title={getLoadingMessage('dashboard')}
-        padding="lg"
-        maxWidth="6xl"
+        padding="sm"
+        maxWidth="full"
       >
         <div className="animate-pulse space-y-8">
           <GostCamGrid columns={4} gap="lg">
@@ -198,12 +198,12 @@ export default function Dashboard() {
           </button>
         </div>
       }
-      padding="lg"
-      maxWidth="6xl"
+      padding="sm"
+      maxWidth="full"
     >
       <div className="space-y-2">
           {/* Tarjetas de estadísticas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {/* Total de equipos */}
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center">
@@ -266,7 +266,7 @@ export default function Dashboard() {
           </div>
 
           {/* Gráficos */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {/* Gráfico de equipos por tipo */}
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Equipos por Tipo</h3>
@@ -297,7 +297,7 @@ export default function Dashboard() {
           </div>
 
           {/* Resumen adicional */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {/* Equipos en mantenimiento */}
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center justify-between">

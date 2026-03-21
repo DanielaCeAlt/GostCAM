@@ -32,7 +32,7 @@ const EquiposManagerHeader: React.FC<EquiposManagerHeaderProps> = ({
   onTabChange
 }) => {
   return (
-    <div className="bg-white shadow rounded-lg p-4 mb-6">
+    <div className="bg-white shadow rounded-lg p-4 mb-3">
       <div className="flex items-center justify-between">
         {/* Título a la izquierda */}
         <div className="flex items-center">

@@ -60,7 +60,9 @@ export function useEquipos() {
         setEquipos(equiposData);
         
         // Actualizar paginación si viene en la respuesta
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if ((response as any).pagination) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setPaginacion((response as any).pagination);
         }
       }

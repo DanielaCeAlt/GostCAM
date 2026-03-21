@@ -236,9 +236,24 @@ export async function POST(request: NextRequest) {
     if (equipoExistente.length > 0) {
       return NextResponse.json({
         success: false,
-        error: 'El número de serie ya existe',
+        error: `El número de serie "${noSerie}" ya está registrado`,
         message: 'No se puede crear el equipo'
       } as ApiResponse<any>, { status: 409 });
+    }
+
+    // Verificar si el número de activo ya existe (si se proporcionó)
+    if (body.numeroActivo && body.numeroActivo.trim() !== '') {
+      const activoExistente = await executeQuery(
+        'SELECT no_serie FROM Equipo WHERE numeroActivo = ? AND (eliminado = 0 OR eliminado IS NULL)',
+        [body.numeroActivo.trim()]
+      );
+      if (activoExistente.length > 0) {
+        return NextResponse.json({
+          success: false,
+          error: `El número de activo "${body.numeroActivo}" ya está registrado en otro equipo`,
+          message: 'No se puede crear el equipo'
+        } as ApiResponse<any>, { status: 409 });
+      }
     }
 
     // Insertar equipo en la base de datos

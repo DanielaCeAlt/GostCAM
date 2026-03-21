@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 
 export default function LoginScreen() {
-  const { login } = useApp();
+  const { login: loginUser } = useApp();
   const [credentials, setCredentials] = useState({
     email: '',
     password: ''
@@ -18,7 +18,7 @@ export default function LoginScreen() {
     setError('');
 
     try {
-      await login(credentials.email, credentials.password);
+      await loginUser(credentials.email, credentials.password);
     } catch (err) {
       setError('Credenciales inválidas. Por favor, intenta de nuevo.');
     } finally {

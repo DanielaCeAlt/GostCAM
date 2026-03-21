@@ -30,11 +30,19 @@ interface EstatusEquipo {
   nombre: string;
 }
 
+interface Modelo {
+  idModelo: number;
+  nombre: string;
+  marca: string | null;
+  idTipoEquipo: number | null;
+}
+
 export function useCatalogos() {
   const [tiposEquipo, setTiposEquipo] = useState<TipoEquipo[]>([]);
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [estatusEquipo, setEstatusEquipo] = useState<EstatusEquipo[]>([]);
+  const [modelos, setModelos] = useState<Modelo[]>([]);
   const [loading, setLoading] = useState(false);
 
   const cargarTiposEquipo = useCallback(async () => {
@@ -85,6 +93,18 @@ export function useCatalogos() {
     }
   }, []);
 
+  const cargarModelos = useCallback(async () => {
+    try {
+      const response = await apiService.get('/api/catalogos?tipo=modelos');
+      if (response.success && Array.isArray(response.data)) {
+        setModelos(response.data);
+      }
+    } catch (error) {
+      console.error('Error cargando modelos:', error);
+      setModelos([]);
+    }
+  }, []);
+
   const cargarTodosCatalogos = useCallback(async () => {
     setLoading(true);
     try {
@@ -93,7 +113,8 @@ export function useCatalogos() {
         cargarTiposEquipo(),
         cargarSucursales(),
         cargarUsuarios(),
-        cargarEstatusEquipo()
+        cargarEstatusEquipo(),
+        cargarModelos()
       ]);
       console.log('✅ Catálogos cargados correctamente');
     } catch (error) {
@@ -101,7 +122,7 @@ export function useCatalogos() {
     } finally {
       setLoading(false);
     }
-  }, [cargarTiposEquipo, cargarSucursales, cargarUsuarios, cargarEstatusEquipo]);
+  }, [cargarTiposEquipo, cargarSucursales, cargarUsuarios, cargarEstatusEquipo, cargarModelos]);
 
   // Cargar catálogos al montar el hook
   useEffect(() => {
@@ -113,11 +134,13 @@ export function useCatalogos() {
     sucursales,
     usuarios,
     estatusEquipo,
+    modelos,
     loading,
     cargarTiposEquipo,
     cargarSucursales,
     cargarUsuarios,
     cargarEstatusEquipo,
+    cargarModelos,
     cargarTodosCatalogos
   };
 }

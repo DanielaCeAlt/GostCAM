@@ -2,15 +2,24 @@
 // SERVICIO: CLIENTE API PYTHON
 // =============================================
 
-// Configuración para conectar con tu API Python existente
-const API_BASE_URL = process.env.NEXT_PUBLIC_PYTHON_API_URL || 'http://localhost:8000';
+// En el navegador usamos la ruta proxy de Next.js (/api/python/...)
+// para evitar que "localhost" se resuelva en el dispositivo del cliente.
+// En SSR/servidor, llamamos directamente al backend Python.
+function getBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    // Browser: usar proxy interno de Next.js (mismo origen → sin problemas CORS/HTTPS)
+    return '/api/python';
+  }
+  // Servidor Node: llamar directo al backend Python
+  return process.env.PYTHON_API_URL || 'http://localhost:8000';
+}
 
 class PythonApiClient {
   private baseUrl: string;
   private token: string | null = null;
 
-  constructor(baseUrl: string = API_BASE_URL) {
-    this.baseUrl = baseUrl;
+  constructor(baseUrl?: string) {
+    this.baseUrl = baseUrl ?? getBaseUrl();
   }
 
   // Configurar token de autenticación
@@ -23,7 +32,9 @@ class PythonApiClient {
     endpoint: string, 
     options: RequestInit = {}
   ): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
+    // Recalcular baseUrl en cada request para soportar SSR + browser correctamente
+    const base = getBaseUrl();
+    const url = `${base}${endpoint}`;
     
     const config: RequestInit = {
       ...options,
