@@ -1,4 +1,4 @@
-# ===============================
+﻿# ===============================
 # GOSTCAM - SCRIPT DE INICIO UNIFICADO
 # ===============================
 
@@ -15,7 +15,8 @@ function Test-Port {
         return $false  # Puerto disponible
     } catch {
         return $true   # Puerto en uso
-    }
+    }       INSERT INTO GostCAM.Modelo (nombreModelo, marca, idTipoEquipo) 
+    VALUES ('Inspiron 15 3000', 'Dell', NULL);
 }
 
 # Verificar puertos
@@ -64,7 +65,7 @@ if (Test-Path "requirements.txt") {
 # Iniciar FastAPI en background
 Write-Host "🚀 Iniciando servidor FastAPI en puerto 8000..." -ForegroundColor Green
 try {
-    Start-Process -FilePath "python" -ArgumentList "-m", "uvicorn", "main:app", "--reload", "--host", "0.0.0.0", "--port", "8000" -WindowStyle Normal
+    Start-Process -FilePath "python" -ArgumentList "main.py" -WindowStyle Normal
     Write-Host "✅ Backend FastAPI iniciado" -ForegroundColor Green
     Start-Sleep -Seconds 3
 } catch {
@@ -96,11 +97,11 @@ if (-not (Test-Path ".env.local")) {
     Write-Host "💡 Asegúrate de tener la configuración correcta" -ForegroundColor Blue
 }
 
-# Iniciar Next.js
-Write-Host "🚀 Iniciando servidor Next.js en puerto 3000..." -ForegroundColor Green
+# Iniciar Next.js con HTTPS (necesario para cámara en móvil)
+Write-Host "🚀 Iniciando servidor Next.js en puerto 3000 (HTTPS)..." -ForegroundColor Green
 try {
-    Start-Process -FilePath "npm" -ArgumentList "run", "dev" -WindowStyle Normal
-    Write-Host "✅ Frontend Next.js iniciado" -ForegroundColor Green
+    Start-Process -FilePath "npm" -ArgumentList "run", "dev:https" -WindowStyle Normal
+    Write-Host "✅ Frontend Next.js iniciado (HTTPS habilitado)" -ForegroundColor Green
     Start-Sleep -Seconds 2
 } catch {
     Write-Host "❌ Error iniciando Frontend: $($_.Exception.Message)" -ForegroundColor Red
@@ -114,10 +115,11 @@ Set-Location ".."
 # ===============================
 Write-Host "`n🌐 SERVICIOS DISPONIBLES:" -ForegroundColor Green
 Write-Host "================================" -ForegroundColor Yellow
-Write-Host "Frontend (Next.js): http://localhost:3000" -ForegroundColor Cyan
+Write-Host "Frontend (Next.js): https://localhost:3000" -ForegroundColor Cyan
 Write-Host "Backend (FastAPI):  http://localhost:8000" -ForegroundColor Cyan
 Write-Host "API Docs (Swagger): http://localhost:8000/docs" -ForegroundColor Cyan
 Write-Host "API Redoc:          http://localhost:8000/redoc" -ForegroundColor Cyan
+Write-Host "(Acepta el certificado autofirmado en el navegador)" -ForegroundColor DarkGray
 
 Write-Host "`n📊 ESTADO DEL SISTEMA:" -ForegroundColor Green
 Write-Host "=====================" -ForegroundColor Yellow
@@ -138,7 +140,7 @@ try {
 }
 
 try {
-    $response = Invoke-WebRequest -Uri "http://localhost:3000" -Method GET -TimeoutSec 10
+    $response = Invoke-WebRequest -Uri "https://localhost:3000" -Method GET -TimeoutSec 10 -SkipCertificateCheck
     if ($response.StatusCode -eq 200) {
         Write-Host "✅ Frontend Next.js: ACTIVO" -ForegroundColor Green
     } else {
@@ -158,7 +160,8 @@ Write-Host "2. Los servicios seguirán ejecutándose en ventanas separadas" -For
 Write-Host "3. Para detener todo: cierra las ventanas o usa TaskManager" -ForegroundColor Cyan
 
 Write-Host "`n🚀 ¡GOSTCAM ESTÁ LISTO!" -ForegroundColor Green
-Write-Host "Puedes acceder a la aplicación en: http://localhost:3000" -ForegroundColor Yellow
+Write-Host "Puedes acceder a la aplicación en: https://localhost:3000" -ForegroundColor Yellow
+Write-Host "Desde móvil (misma red Wi-Fi): https://192.168.137.231:3000" -ForegroundColor Yellow
 
 # Mantener el script activo para mostrar logs si es necesario
 Write-Host "`nPresiona cualquier tecla para cerrar este monitor..." -ForegroundColor Cyan
