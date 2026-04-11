@@ -91,11 +91,24 @@ interface ResponseData {
   equiposSimilares: EquipoSimilar[];
 }
 
+interface FallaEquipo {
+  id: number;
+  tipo_falla: string;
+  descripcion_problema: string;
+  prioridad: 'BAJA' | 'NORMAL' | 'ALTA' | 'CRITICA';
+  estatus: 'ABIERTA' | 'EN_PROCESO' | 'RESUELTA' | 'CANCELADA';
+  fecha_reporte: string;
+  tecnico_asignado?: string;
+  diasAbierta: number;
+}
+
 export default function EquipoDashboard({ noSerie, onVolver }: EquipoDashboardProps) {
   const [data, setData] = useState<ResponseData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [fallas, setFallas] = useState<FallaEquipo[]>([]);
+  const [loadingFallas, setLoadingFallas] = useState(false);
 
   // Cargar datos del equipo
   const cargarDatosEquipo = async () => {
@@ -116,6 +129,21 @@ export default function EquipoDashboard({ noSerie, onVolver }: EquipoDashboardPr
       setError('Error de conexión');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const cargarFallas = async () => {
+    setLoadingFallas(true);
+    try {
+      const response = await fetch(`/api/equipos/fallas?no_serie=${encodeURIComponent(noSerie)}`);
+      const result = await response.json();
+      if (result.success) {
+        setFallas(result.data.fallas || []);
+      }
+    } catch (err) {
+      console.error('Error cargando fallas:', err);
+    } finally {
+      setLoadingFallas(false);
     }
   };
 
@@ -144,6 +172,7 @@ export default function EquipoDashboard({ noSerie, onVolver }: EquipoDashboardPr
   useEffect(() => {
     if (noSerie) {
       cargarDatosEquipo();
+      cargarFallas();
     }
   }, [noSerie]);
 
@@ -599,6 +628,106 @@ export default function EquipoDashboard({ noSerie, onVolver }: EquipoDashboardPr
           <div className="text-center text-gray-500 py-8">
             <i className="fas fa-inbox text-4xl mb-4"></i>
             <p>No hay movimientos registrados para este equipo</p>
+          </div>
+        )}
+      </div>
+
+      {/* Fallas del equipo */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">
+            <i className="fas fa-exclamation-triangle text-red-500 mr-2"></i>
+            Fallas Registradas
+            {fallas.length > 0 && (
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                {fallas.filter(f => f.estatus === 'ABIERTA' || f.estatus === 'EN_PROCESO').length} activas
+              </span>
+            )}
+          </h3>
+          <div className="flex gap-2 text-xs text-gray-500">
+            <span className="inline-flex items-center px-2 py-1 rounded-full bg-red-100 text-red-700">
+              {fallas.filter(f => f.estatus === 'ABIERTA').length} abiertas
+            </span>
+            <span className="inline-flex items-center px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
+              {fallas.filter(f => f.estatus === 'EN_PROCESO').length} en proceso
+            </span>
+            <span className="inline-flex items-center px-2 py-1 rounded-full bg-green-100 text-green-700">
+              {fallas.filter(f => f.estatus === 'RESUELTA').length} resueltas
+            </span>
+          </div>
+        </div>
+
+        {loadingFallas ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-500 mr-2"></div>
+            <span className="text-gray-500 text-sm">Cargando fallas...</span>
+          </div>
+        ) : fallas.length === 0 ? (
+          <div className="text-center text-gray-500 py-8">
+            <i className="fas fa-check-circle text-3xl text-green-400 mb-3"></i>
+            <p className="text-sm">Sin fallas registradas para este equipo</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prioridad</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estatus</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Técnico</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Días</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {fallas.slice(0, 10).map((falla) => (
+                  <tr key={falla.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                      {falla.tipo_falla}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate" title={falla.descripcion_problema}>
+                      {falla.descripcion_problema}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        falla.prioridad === 'CRITICA' ? 'bg-red-100 text-red-800' :
+                        falla.prioridad === 'ALTA' ? 'bg-orange-100 text-orange-800' :
+                        falla.prioridad === 'NORMAL' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {falla.prioridad}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        falla.estatus === 'ABIERTA' ? 'bg-red-100 text-red-800' :
+                        falla.estatus === 'EN_PROCESO' ? 'bg-yellow-100 text-yellow-800' :
+                        falla.estatus === 'RESUELTA' ? 'bg-green-100 text-green-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {falla.estatus.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                      {new Date(falla.fecha_reporte).toLocaleDateString('es-ES')}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                      {falla.tecnico_asignado || <span className="text-gray-400">Sin asignar</span>}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                      {falla.diasAbierta}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {fallas.length > 10 && (
+              <p className="text-xs text-gray-500 mt-2 text-right">
+                Mostrando 10 de {fallas.length} fallas
+              </p>
+            )}
           </div>
         )}
       </div>

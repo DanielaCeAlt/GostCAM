@@ -74,6 +74,7 @@ export async function GET(request: NextRequest) {
     const prioridad = searchParams.get('prioridad');
     const tipo_falla = searchParams.get('tipo_falla');
     const tecnico = searchParams.get('tecnico_asignado');
+    const no_serie = searchParams.get('no_serie');
 
     let query = `
       SELECT
@@ -113,6 +114,7 @@ export async function GET(request: NextRequest) {
     if (prioridad) { query += ` AND f.prioridad = ?`; params.push(prioridad); }
     if (tipo_falla) { query += ` AND f.tipo_falla = ?`; params.push(tipo_falla); }
     if (tecnico) { query += ` AND f.tecnico_asignado LIKE ?`; params.push(`%${tecnico}%`); }
+    if (no_serie) { query += ` AND f.no_serie = ?`; params.push(no_serie); }
 
     query += ` ORDER BY f.fecha_reporte DESC`;
 

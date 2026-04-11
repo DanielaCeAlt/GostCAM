@@ -2,6 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import SucursalesManagerHeader from './equipos/SucursalesManagerHeader';
+import SucursalEditModal from './equipos/SucursalEditModal';
+import AsignarEquipoModal from './equipos/AsignarEquipoModal';
+import LayoutEditor from './equipos/LayoutEditor';
 
 interface Equipo {
   no_serie: string;
@@ -17,11 +20,17 @@ interface Equipo {
 }
 
 interface Sucursal {
-  id: number;
+  id: string | number;
+  idCentro?: string;
   nombre: string;
   direccion: string;
   ciudad: string;
   estado: string;
+  zona?: string;
+  municipio?: string;
+  idZona?: number;
+  idEstado?: number;
+  idMunicipios?: number;
   telefono?: string;
   email?: string;
   totalCamaras: number;
@@ -29,6 +38,12 @@ interface Sucursal {
   camarasActivas: number;
   sensoresActivos: number;
   equiposTotal: number;
+}
+
+interface CatalogosSucursal {
+  zonas: any[];
+  estados: any[];
+  municipios: any[];
 }
 
 interface SucursalesStats {
@@ -59,6 +74,14 @@ export default function Sucursales() {
   const [loadingEquipos, setLoadingEquipos] = useState(false);
   const [vistaActual, setVistaActual] = useState<'lista' | 'detalle'>('lista');
 
+  // Estados para modales
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showAsignarModal, setShowAsignarModal] = useState(false);
+  const [showLayoutModal, setShowLayoutModal] = useState(false);
+  const [catalogos, setCatalogos] = useState<CatalogosSucursal>({ zonas: [], estados: [], municipios: [] });
+  const [sucursalFullData, setSucursalFullData] = useState<any>(null);
+  const [cargandoEditar, setCargandoEditar] = useState(false);
+
   useEffect(() => {
     cargarSucursales();
   }, []);
@@ -83,7 +106,8 @@ export default function Sucursales() {
         
         // Mapear datos del API a la estructura esperada
         sucursalesData = data.data.map((sucursal: any, index: number) => ({
-          id: sucursal.id || index + 1,
+          id: sucursal.id || sucursal.idCentro || index + 1,
+          idCentro: sucursal.idCentro || String(sucursal.id),
           nombre: sucursal.nombre || sucursal.Sucursal || `Sucursal ${index + 1}`,
           direccion: sucursal.direccion || sucursal.Direccion || 'Dirección no disponible',
           ciudad: sucursal.ciudad || 'Ciudad',
@@ -210,13 +234,31 @@ export default function Sucursales() {
   const cargarEquiposSucursal = async (sucursal: Sucursal) => {
     setLoadingEquipos(true);
     try {
-      // Simulamos la carga de equipos por sucursal
-      const equiposMock: Equipo[] = generarEquiposPorSucursal(sucursal);
-      setEquiposSucursal(equiposMock);
-      
+      const idCentro = sucursal.idCentro || String(sucursal.id);
+      const res = await fetch(`/api/sucursales/${idCentro}`);
+      const data = await res.json();
+      if (data.success) {
+        const equiposReales: Equipo[] = (data.data.equipos || []).map((eq: any) => ({
+          no_serie: eq.no_serie,
+          nombreEquipo: eq.nombreEquipo,
+          TipoEquipo: eq.TipoEquipo,
+          marca: eq.marca || '',
+          modelo: eq.modelo || '',
+          EstatusEquipo: eq.EstatusEquipo,
+          AreaActual: eq.AreaActual,
+          fechaInstalacion: eq.fechaAlta || '',
+          estadoConexion: eq.EstatusEquipo === 'Activo' ? 'Conectado' : 'Desconectado' as 'Conectado' | 'Desconectado' | 'Error'
+        }));
+        setEquiposSucursal(equiposReales);
+        setSucursalFullData(data.data.sucursal);
+        setCatalogos(data.data.catalogos || { zonas: [], estados: [], municipios: [] });
+      } else {
+        // Fallback a datos mock si falla la API
+        setEquiposSucursal(generarEquiposPorSucursal(sucursal));
+      }
     } catch (error) {
       console.error('Error cargando equipos de sucursal:', error);
-      setEquiposSucursal([]);
+      setEquiposSucursal(generarEquiposPorSucursal(sucursal));
     }
     setLoadingEquipos(false);
   };
@@ -279,6 +321,29 @@ export default function Sucursales() {
     await cargarEquiposSucursal(sucursal);
   };
 
+  // Carga los datos completos de la sucursal (para edición) de forma independiente
+  const abrirEditar = async (sucursal: Sucursal) => {
+    setCargandoEditar(true);
+    const idCentro = sucursal.idCentro || String(sucursal.id);
+    try {
+      const res = await fetch(`/api/sucursales/${encodeURIComponent(idCentro)}`);
+      const data = await res.json();
+      if (data.success) {
+        setSucursalFullData(data.data.sucursal);
+        setCatalogos(data.data.catalogos || { zonas: [], estados: [], municipios: [] });
+      } else {
+        alert('No se pudieron cargar los datos de la sucursal');
+        return;
+      }
+    } catch {
+      alert('Error de conexión al cargar la sucursal');
+      return;
+    } finally {
+      setCargandoEditar(false);
+    }
+    setShowEditModal(true);
+  };
+
   const volverALista = () => {
     setVistaActual('lista');
     setSucursalSeleccionada(null);
@@ -328,11 +393,38 @@ export default function Sucursales() {
                 {sucursalSeleccionada.direccion}, {sucursalSeleccionada.ciudad}
               </p>
             </div>
-            <div className="text-right">
-              <div className="text-sm text-gray-500">Total de Equipos</div>
-              <div className="text-2xl font-bold text-gray-900">
-                {sucursalSeleccionada.equiposTotal}
+            <div className="flex items-center space-x-3">
+              <div className="text-right mr-4">
+                <div className="text-sm text-gray-500">Total de Equipos</div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {equiposSucursal.length || sucursalSeleccionada.equiposTotal}
+                </div>
               </div>
+              <button
+                onClick={() => setShowAsignarModal(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors"
+              >
+                <i className="fas fa-plus"></i>
+                <span>Registrar Dispositivo</span>
+              </button>
+              <button
+                onClick={() => setShowLayoutModal(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 transition-colors"
+              >
+                <i className="fas fa-map"></i>
+                <span>Ver Layout</span>
+              </button>
+              <button
+                onClick={() => sucursalSeleccionada && abrirEditar(sucursalSeleccionada)}
+                disabled={cargandoEditar}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {cargandoEditar
+                  ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  : <i className="fas fa-edit"></i>
+                }
+                <span>Editar Sucursal</span>
+              </button>
             </div>
           </div>
         </div>
@@ -586,6 +678,47 @@ export default function Sucursales() {
             </>
           )}
         </div>
+
+        {/* Modal Editar Sucursal */}
+        {showEditModal && sucursalFullData && (
+          <SucursalEditModal
+            sucursal={sucursalFullData}
+            catalogos={catalogos}
+            onSave={(updated) => {
+              setShowEditModal(false);
+              setSucursalSeleccionada(prev => prev ? {
+                ...prev,
+                nombre: updated.Sucursal,
+                direccion: updated.Direccion,
+              } : prev);
+              setSucursalFullData(updated);
+              cargarSucursales();
+            }}
+            onClose={() => { setShowEditModal(false); setSucursalFullData(null); }}
+          />
+        )}
+
+        {/* Modal Asignar Equipo */}
+        {showAsignarModal && sucursalSeleccionada && (
+          <AsignarEquipoModal
+            idCentro={sucursalSeleccionada.idCentro || String(sucursalSeleccionada.id)}
+            nombreSucursal={sucursalSeleccionada.nombre}
+            onSave={() => {
+              setShowAsignarModal(false);
+              cargarEquiposSucursal(sucursalSeleccionada);
+            }}
+            onClose={() => setShowAsignarModal(false)}
+          />
+        )}
+
+        {/* Modal Layout */}
+        {showLayoutModal && sucursalSeleccionada && (
+          <LayoutEditor
+            idCentro={sucursalSeleccionada.idCentro || String(sucursalSeleccionada.id)}
+            nombreSucursal={sucursalSeleccionada.nombre}
+            onClose={() => setShowLayoutModal(false)}
+          />
+        )}
       </div>
     );
   }
@@ -819,16 +952,18 @@ export default function Sucursales() {
                         <button
                           onClick={() => verDetalleSucursal(sucursal)}
                           className="text-blue-600 hover:text-blue-900 mr-2"
+                          title="Ver detalle"
                         >
                           <i className="fas fa-eye"></i>
                         </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            // Aquí se puede agregar funcionalidad de editar
-                            console.log('Editar sucursal:', sucursal.id);
+                            abrirEditar(sucursal);
                           }}
-                          className="text-gray-600 hover:text-gray-900"
+                          disabled={cargandoEditar}
+                          className="text-gray-600 hover:text-gray-900 disabled:opacity-50"
+                          title="Editar sucursal"
                         >
                           <i className="fas fa-edit"></i>
                         </button>
@@ -847,6 +982,47 @@ export default function Sucursales() {
           </div>
         )}
       </div>
+
+      {/* Modal Editar Sucursal */}
+      {showEditModal && sucursalFullData && (
+        <SucursalEditModal
+          sucursal={sucursalFullData}
+          catalogos={catalogos}
+          onSave={(updated) => {
+            setShowEditModal(false);
+            setSucursalSeleccionada(prev => prev ? {
+              ...prev,
+              nombre: updated.Sucursal,
+              direccion: updated.Direccion,
+            } : prev);
+            setSucursalFullData(updated);
+            cargarSucursales();
+          }}
+          onClose={() => { setShowEditModal(false); setSucursalFullData(null); }}
+        />
+      )}
+
+      {/* Modal Asignar Equipo */}
+      {showAsignarModal && sucursalSeleccionada && (
+        <AsignarEquipoModal
+          idCentro={sucursalSeleccionada.idCentro || String(sucursalSeleccionada.id)}
+          nombreSucursal={sucursalSeleccionada.nombre}
+          onSave={() => {
+            setShowAsignarModal(false);
+            cargarEquiposSucursal(sucursalSeleccionada);
+          }}
+          onClose={() => setShowAsignarModal(false)}
+        />
+      )}
+
+      {/* Modal Layout */}
+      {showLayoutModal && sucursalSeleccionada && (
+        <LayoutEditor
+          idCentro={sucursalSeleccionada.idCentro || String(sucursalSeleccionada.id)}
+          nombreSucursal={sucursalSeleccionada.nombre}
+          onClose={() => setShowLayoutModal(false)}
+        />
+      )}
     </div>
   );
 }
