@@ -1,7 +1,0 @@
-var R=require("../../../chunks/[turbopack]_runtime.js")("server/app/api/setup-logical-delete/route.js")
-R.c("server/chunks/[root-of-the-server]__e439f51b._.js")
-R.c("server/chunks/[root-of-the-server]__fb889e81._.js")
-R.c("server/chunks/[root-of-the-server]__703022d1._.js")
-R.m(98973)
-R.m(57365)
-module.exports=R.m(57365).exports

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import FallasManagerHeader from './FallasManagerHeader';
+import ModalEvaluacionTecnico, { FallaParaEvaluar } from './ModalEvaluacionTecnico';
 
 interface FallaData {
   id: number;
@@ -91,6 +92,7 @@ const EquiposFallas: React.FC = () => {
   const [busquedaTerm, setBusquedaTerm] = useState('');
   const [fallaSeleccionada, setFallaSeleccionada] = useState<FallaData | null>(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [fallaParaEvaluar, setFallaParaEvaluar] = useState<FallaParaEvaluar | null>(null);
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [loadingEquipos, setLoadingEquipos] = useState(false);
   const [errorEquipos, setErrorEquipos] = useState('');
@@ -268,6 +270,16 @@ const EquiposFallas: React.FC = () => {
       const result = await response.json();
       if (result.success) {
         setShowUpdateModal(false);
+        // Si la falla se resolvió o canceló, abrir modal de evaluación
+        const nuevoEstatus = updateData.estatus;
+        if ((nuevoEstatus === 'RESUELTA' || nuevoEstatus === 'CANCELADA') && fallaSeleccionada.tecnico_asignado) {
+          setFallaParaEvaluar({
+            id: fallaSeleccionada.id,
+            no_serie: fallaSeleccionada.no_serie,
+            tecnico_asignado: fallaSeleccionada.tecnico_asignado,
+            tiempo_solucion_horas: updateData.tiempo_solucion_horas ?? fallaSeleccionada.tiempo_solucion_horas,
+          });
+        }
         setFallaSeleccionada(null);
         cargarFallas();
       } else {
@@ -990,6 +1002,16 @@ const EquiposFallas: React.FC = () => {
           )}
         </div>
 
+        {/* Modal de Evaluación de Técnico (aparece al resolver/cancelar) */}
+        {fallaParaEvaluar && (
+          <ModalEvaluacionTecnico
+            falla={fallaParaEvaluar}
+            tecnicos={tecnicos}
+            onClose={() => setFallaParaEvaluar(null)}
+            onGuardado={() => setFallaParaEvaluar(null)}
+          />
+        )}
+
         {/* Modal de Actualización */}
         {showUpdateModal && fallaSeleccionada && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1008,6 +1030,7 @@ const EquiposFallas: React.FC = () => {
                              bg-white  text-gray-900 "
                     onChange={(e) => {
                       const estatus = e.target.value;
+                      if (!estatus) return;
                       if (estatus === 'RESUELTA') {
                         const horas = prompt('Ingrese las horas de solución:');
                         const solucion = prompt('Ingrese la solución aplicada:');

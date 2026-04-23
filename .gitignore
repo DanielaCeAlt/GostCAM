@@ -1,0 +1,14 @@
+# Next.js build output
+GostCAM - Frontend/.next/
+GostCAM - Frontend/node_modules/
+GostCAM - Frontend/.env*.local
+
+# Backend Python
+GostCAM - BackendAPI/__pycache__/
+GostCAM - BackendAPI/.venv/
+GostCAM - BackendAPI/logs/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+*.log

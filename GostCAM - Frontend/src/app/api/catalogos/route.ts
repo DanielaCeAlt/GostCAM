@@ -81,10 +81,11 @@ export async function GET(request: NextRequest) {
 
       case 'tecnicos':
         data = await executeQuery(`
-          SELECT idUsuarios as id, NombreUsuario as nombre
-          FROM GostCAM.Usuarios
-          WHERE NivelUsuario IN (1, 2, 3)
-          ORDER BY NombreUsuario
+          SELECT idTecnico AS id, nombreTecnico AS nombre,
+                 telefono, correo, especialidad, zona
+          FROM GostCAM.Tecnicos
+          WHERE activo = 1
+          ORDER BY nombreTecnico
         `);
         break;
 

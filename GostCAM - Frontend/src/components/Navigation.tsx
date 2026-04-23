@@ -28,6 +28,7 @@ export default function Navigation() {
     { id: 'equipos',     label: 'Equipos',     icon: 'fas fa-desktop',              shortcut: 'E', href: '/equipos' },
     { id: 'sucursales',  label: 'Sucursales',  icon: 'fas fa-building',             shortcut: 'S', href: '/sucursales' },
     { id: 'fallas',      label: 'Fallas',      icon: 'fas fa-exclamation-triangle', shortcut: 'F', href: '/fallas' },
+    { id: 'tecnicos',    label: 'Técnicos',    icon: 'fas fa-user-check',           shortcut: 'T', href: '/tecnicos' },
   ], []);
 
   // Keyboard shortcuts
@@ -38,7 +39,7 @@ export default function Navigation() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { setMobileOpen(false); }
       if (e.altKey && !e.ctrlKey && !e.metaKey) {
-        const shortcuts: Record<string, string> = { h: 'dashboard', e: 'equipos', s: 'sucursales', f: 'fallas' };
+        const shortcuts: Record<string, string> = { h: 'dashboard', e: 'equipos', s: 'sucursales', f: 'fallas', t: 'tecnicos' };
         const sectionId = shortcuts[e.key.toLowerCase()];
         if (sectionId) {
           e.preventDefault();
