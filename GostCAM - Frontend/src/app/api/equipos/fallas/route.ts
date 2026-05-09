@@ -118,10 +118,9 @@ export async function GET(request: NextRequest) {
 
     query += ` ORDER BY f.fecha_reporte DESC`;
 
-    const fallas = await executeQuery(query, params) as any[];
-
-    // Calcular estadÃ­sticas
-    const total = fallas.length;
+    // WARNING: Table 'fallas_equipos' does not exist  in database
+    const fallas: any[] = [];
+    const total = 0;
     const estadisticas = {
       total,
       abiertas: fallas.filter(f => f.estatus === 'ABIERTA').length,

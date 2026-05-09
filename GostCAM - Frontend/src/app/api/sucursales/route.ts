@@ -14,7 +14,7 @@ export async function GET() {
       LEFT JOIN estados e ON e.idEstado = s.idEstado
       LEFT JOIN municipios m ON m.idMunicipios = s.idMunicipios
       LEFT JOIN posicionequipo pe ON pe.idCentro = s.idCentro
-      LEFT JOIN equipo eq ON eq.idPosicion = pe.idPosicion AND (eq.eliminado IS NULL OR eq.eliminado = 0)
+      LEFT JOIN equipo eq ON eq.idPosicion = pe.idPosicion
       GROUP BY s.idCentro, s.Sucursal, s.Direccion, z.Zona, e.Estado, m.Municipio
       ORDER BY s.Sucursal
     `);

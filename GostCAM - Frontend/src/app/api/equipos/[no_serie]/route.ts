@@ -31,7 +31,7 @@ export async function GET(
       LEFT JOIN tipoequipo te ON e.idTipoEquipo = te.idTipoEquipo
       LEFT JOIN estatusequipo ee ON e.idEstatus = ee.idEstatus
       LEFT JOIN usuarios u ON e.idUsuarios = u.idUsuarios
-      WHERE e.no_serie = ? AND (e.eliminado = 0 OR e.eliminado IS NULL)
+      WHERE e.no_serie = ?
     `;
 
     const equipoResult = await executeQuery(equipoQuery, [no_serie]);

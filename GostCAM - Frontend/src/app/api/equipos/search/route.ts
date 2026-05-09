@@ -39,7 +39,6 @@ export async function GET(request: NextRequest) {
       LEFT JOIN usuarios u ON e.idUsuarios = u.idUsuarios
       LEFT JOIN posicionequipo p ON e.idPosicion = p.idPosicion
       LEFT JOIN sucursales s ON p.idCentro = s.idCentro
-      WHERE (e.eliminado = 0 OR e.eliminado IS NULL)
     `;
 
     let query: string;

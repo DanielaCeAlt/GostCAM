@@ -147,9 +147,6 @@ const getEquiposFromTable = async (filters?: {
   const params: (string | number | Date | null | undefined)[] = [];
   const conditions: string[] = [];
 
-  // ✅ Filtrar equipos eliminados lógicamente
-  conditions.push('(e.eliminado IS NULL OR e.eliminado = 0)');
-
   if (filters) {
     if (filters.tipoEquipo) {
       conditions.push('te.nombreTipo = ?');

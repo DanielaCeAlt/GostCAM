@@ -15,8 +15,7 @@ function Test-Port {
         return $false  # Puerto disponible
     } catch {
         return $true   # Puerto en uso
-    }       INSERT INTO GostCAM.Modelo (nombreModelo, marca, idTipoEquipo) 
-    VALUES ('Inspiron 15 3000', 'Dell', NULL);
+    }
 }
 
 # Verificar puertos
@@ -65,7 +64,7 @@ if (Test-Path "requirements.txt") {
 # Iniciar FastAPI en background
 Write-Host "🚀 Iniciando servidor FastAPI en puerto 8000..." -ForegroundColor Green
 try {
-    Start-Process -FilePath "python" -ArgumentList "main.py" -WindowStyle Normal
+    Start-Process -FilePath ".\.venv\Scripts\python.exe" -ArgumentList "main.py" -WindowStyle Normal
     Write-Host "✅ Backend FastAPI iniciado" -ForegroundColor Green
     Start-Sleep -Seconds 3
 } catch {
